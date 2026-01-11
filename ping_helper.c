@@ -111,79 +111,115 @@ int main(int argc, char *argv[]) {
         return 5;
     }
 
-    /* Set socket timeout for receiving */
-    struct timeval tv;
-    tv.tv_sec = timeout_ms / 1000;
-    tv.tv_usec = (timeout_ms % 1000) * 1000;
-
-    fd_set read_fds;
-    FD_ZERO(&read_fds);
-    FD_SET(sockfd, &read_fds);
-
-    int select_result = select(sockfd + 1, &read_fds, NULL, NULL, &tv);
-    if (select_result < 0) {
-        fprintf(stderr, "Error: select failed: %s\n", strerror(errno));
-        close(sockfd);
-        freeaddrinfo(res);
-        return 6;
+    /* Calculate absolute deadline for timeout */
+    struct timeval deadline;
+    deadline.tv_sec = start_time.tv_sec + (timeout_ms / 1000);
+    deadline.tv_usec = start_time.tv_usec + ((timeout_ms % 1000) * 1000);
+    if (deadline.tv_usec >= 1000000) {
+        deadline.tv_sec += 1;
+        deadline.tv_usec -= 1000000;
     }
 
-    if (select_result == 0) {
-        /* Timeout */
-        close(sockfd);
-        freeaddrinfo(res);
-        return 7;
-    }
+    /* Expected values for matching reply */
+    unsigned short expected_id = getpid() & 0xFFFF;
+    unsigned short expected_seq = 1;
+    uint32_t expected_addr = dest_addr->sin_addr.s_addr;
 
-    /* Receive ICMP echo reply */
-    char recv_buf[1024];
-    struct sockaddr_in recv_addr;
-    socklen_t addr_len = sizeof(recv_addr);
-    
-    ssize_t recv_len = recvfrom(sockfd, recv_buf, sizeof(recv_buf), 0,
-                                (struct sockaddr *)&recv_addr, &addr_len);
-    if (recv_len < 0) {
-        fprintf(stderr, "Error: recvfrom failed: %s\n", strerror(errno));
-        close(sockfd);
-        freeaddrinfo(res);
-        return 8;
-    }
+    /* Loop until we receive a matching reply or timeout */
+    while (1) {
+        /* Calculate remaining time until deadline */
+        struct timeval now;
+        gettimeofday(&now, NULL);
+        
+        struct timeval remaining;
+        remaining.tv_sec = deadline.tv_sec - now.tv_sec;
+        remaining.tv_usec = deadline.tv_usec - now.tv_usec;
+        
+        if (remaining.tv_usec < 0) {
+            remaining.tv_sec -= 1;
+            remaining.tv_usec += 1000000;
+        }
+        
+        /* Check if timeout has already expired */
+        if (remaining.tv_sec < 0 || (remaining.tv_sec == 0 && remaining.tv_usec <= 0)) {
+            /* Timeout */
+            close(sockfd);
+            freeaddrinfo(res);
+            return 7;
+        }
 
-    gettimeofday(&end_time, NULL);
+        /* Wait for data with remaining timeout */
+        fd_set read_fds;
+        FD_ZERO(&read_fds);
+        FD_SET(sockfd, &read_fds);
 
-    /* Parse IP header to get to ICMP header */
-    struct ip *ip_hdr = (struct ip *)recv_buf;
-    int ip_header_len = ip_hdr->ip_hl * 4;
-    
-    if (recv_len < ip_header_len + ICMP_HEADER_SIZE) {
-        fprintf(stderr, "Error: received packet too short\n");
-        close(sockfd);
-        freeaddrinfo(res);
-        return 9;
-    }
+        int select_result = select(sockfd + 1, &read_fds, NULL, NULL, &remaining);
+        if (select_result < 0) {
+            fprintf(stderr, "Error: select failed: %s\n", strerror(errno));
+            close(sockfd);
+            freeaddrinfo(res);
+            return 6;
+        }
 
-    struct icmp *recv_icmp = (struct icmp *)(recv_buf + ip_header_len);
+        if (select_result == 0) {
+            /* Timeout */
+            close(sockfd);
+            freeaddrinfo(res);
+            return 7;
+        }
 
-    /* Validate ICMP echo reply */
-    if (recv_icmp->icmp_type != ICMP_ECHOREPLY) {
-        fprintf(stderr, "Error: received ICMP type %d, expected ECHOREPLY\n", recv_icmp->icmp_type);
-        close(sockfd);
-        freeaddrinfo(res);
-        return 10;
-    }
+        /* Receive ICMP packet */
+        char recv_buf[1024];
+        struct sockaddr_in recv_addr;
+        socklen_t addr_len = sizeof(recv_addr);
+        
+        ssize_t recv_len = recvfrom(sockfd, recv_buf, sizeof(recv_buf), 0,
+                                    (struct sockaddr *)&recv_addr, &addr_len);
+        if (recv_len < 0) {
+            fprintf(stderr, "Error: recvfrom failed: %s\n", strerror(errno));
+            close(sockfd);
+            freeaddrinfo(res);
+            return 8;
+        }
 
-    if (ntohs(recv_icmp->icmp_id) != (getpid() & 0xFFFF)) {
-        fprintf(stderr, "Error: ICMP ID mismatch\n");
-        close(sockfd);
-        freeaddrinfo(res);
-        return 11;
-    }
+        /* Parse IP header to get to ICMP header */
+        struct ip *ip_hdr = (struct ip *)recv_buf;
+        int ip_header_len = ip_hdr->ip_hl * 4;
+        
+        if (recv_len < ip_header_len + ICMP_HEADER_SIZE) {
+            /* Packet too short, skip it and continue waiting */
+            continue;
+        }
 
-    if (ntohs(recv_icmp->icmp_seq) != 1) {
-        fprintf(stderr, "Error: ICMP sequence mismatch\n");
-        close(sockfd);
-        freeaddrinfo(res);
-        return 12;
+        struct icmp *recv_icmp = (struct icmp *)(recv_buf + ip_header_len);
+
+        /* Check if this is an ICMP ECHOREPLY */
+        if (recv_icmp->icmp_type != ICMP_ECHOREPLY) {
+            /* Not an echo reply, skip it and continue waiting */
+            continue;
+        }
+
+        /* Check if ID matches our process */
+        if (ntohs(recv_icmp->icmp_id) != expected_id) {
+            /* ID mismatch, this is for another process, skip it */
+            continue;
+        }
+
+        /* Check if sequence matches our request */
+        if (ntohs(recv_icmp->icmp_seq) != expected_seq) {
+            /* Sequence mismatch, skip it */
+            continue;
+        }
+
+        /* Check if source address matches our destination */
+        if (recv_addr.sin_addr.s_addr != expected_addr) {
+            /* Source mismatch, skip it */
+            continue;
+        }
+
+        /* This is our matching reply! Record end time and break */
+        gettimeofday(&end_time, NULL);
+        break;
     }
 
     /* Calculate RTT in milliseconds */
