@@ -22,6 +22,7 @@ MultiPing is an interactive, terminal-based ICMP monitor that pings many hosts i
 - Concurrent ICMP ping to multiple hosts (Scapy-based).
 - Live timeline or sparkline visualization with success/slow/fail markers.
 - Summary panel with host statistics and aggregate counts.
+- TTL (Time To Live) display in statistics showing min/avg/max values from ICMP echo replies.
 - Sort and filter results by failures, streaks, latency, or host name.
 - Toggle display name mode: IP, reverse DNS, or alias.
 - Optional ASN display (fetched from Team Cymru) with auto-retry.
