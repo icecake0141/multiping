@@ -782,16 +782,17 @@ class TestQuitHotkey(unittest.TestCase):
 
         # Mock queue to simulate completion
         result_queue = MagicMock()
-        # First return "done" for each host, then raise Empty
-        result_queue.get_nowait.side_effect = queue.Empty()
+        # Always raise Empty to simulate no results
+        result_queue.get_nowait.side_effect = queue.Empty
         empty_queue = MagicMock()
-        empty_queue.get_nowait.side_effect = queue.Empty()
+        empty_queue.get_nowait.side_effect = queue.Empty
+        # Queue instances: result_queue, rdns_request_queue, rdns_result_queue, asn_request_queue, asn_result_queue
         mock_queue.side_effect = [
-            result_queue,
-            MagicMock(),
-            empty_queue,
-            MagicMock(),
-            empty_queue,
+            result_queue,  # result_queue
+            MagicMock(),   # rdns_request_queue
+            empty_queue,   # rdns_result_queue
+            MagicMock(),   # asn_request_queue
+            empty_queue,   # asn_result_queue
         ]
 
         # Mock read_key to return 'q' after a few iterations
@@ -845,15 +846,17 @@ class TestQuitHotkey(unittest.TestCase):
 
         # Mock queue to simulate completion
         result_queue = MagicMock()
-        result_queue.get_nowait.side_effect = queue.Empty()
+        # Always raise Empty to simulate no results
+        result_queue.get_nowait.side_effect = queue.Empty
         empty_queue = MagicMock()
-        empty_queue.get_nowait.side_effect = queue.Empty()
+        empty_queue.get_nowait.side_effect = queue.Empty
+        # Queue instances: result_queue, rdns_request_queue, rdns_result_queue, asn_request_queue, asn_result_queue
         mock_queue.side_effect = [
-            result_queue,
-            MagicMock(),
-            empty_queue,
-            MagicMock(),
-            empty_queue,
+            result_queue,  # result_queue
+            MagicMock(),   # rdns_request_queue
+            empty_queue,   # rdns_result_queue
+            MagicMock(),   # asn_request_queue
+            empty_queue,   # asn_result_queue
         ]
 
         # Mock read_key to open help screen with 'H', then press 'q' to quit
