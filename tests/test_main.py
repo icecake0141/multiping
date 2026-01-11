@@ -739,8 +739,8 @@ class TestStatusLine(unittest.TestCase):
     def test_build_status_line_basic(self):
         """Test basic status line building"""
         result = build_status_line("failures", "all", False, None)
-        self.assertIn("失敗回数", result)
-        self.assertIn("全件", result)
+        self.assertIn("Failure Count", result)
+        self.assertIn("All Items", result)
         self.assertNotIn("PAUSED", result)
 
     def test_build_status_line_paused(self):
@@ -756,8 +756,8 @@ class TestStatusLine(unittest.TestCase):
     def test_build_status_line_different_modes(self):
         """Test status line with different sort and filter modes"""
         result = build_status_line("latency", "failures", False, None)
-        self.assertIn("最新遅延", result)
-        self.assertIn("失敗のみ", result)
+        self.assertIn("Latest Latency", result)
+        self.assertIn("Failures Only", result)
 
 
 if __name__ == "__main__":
