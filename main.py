@@ -528,15 +528,19 @@ def build_display_entries(
 
 def build_status_line(sort_mode, filter_mode, paused, status_message=None):
     sort_labels = {
-        "failures": "失敗回数",
-        "streak": "連続失敗",
-        "latency": "最新遅延",
-        "host": "ホスト名",
+        "failures": "Failure Count",
+        "streak": "Failure Streak",
+        "latency": "Latest Latency",
+        "host": "Host Name",
     }
-    filter_labels = {"failures": "失敗のみ", "latency": "高遅延のみ", "all": "全件"}
+    filter_labels = {
+        "failures": "Failures Only",
+        "latency": "High Latency Only",
+        "all": "All Items",
+    }
     sort_label = sort_labels.get(sort_mode, sort_mode)
     filter_label = filter_labels.get(filter_mode, filter_mode)
-    status = f"ソート: {sort_label} | フィルタ: {filter_label}"
+    status = f"Sort: {sort_label} | Filter: {filter_label}"
     if paused:
         status += " | PAUSED"
     if status_message:
@@ -1058,7 +1062,7 @@ def main(args):
                         updated = True
                     elif key == "p":
                         paused = not paused
-                        status_message = "一時停止中" if paused else "再開しました"
+                        status_message = "Paused" if paused else "Resumed"
                         if pause_mode == "ping":
                             if paused:
                                 pause_event.set()
@@ -1093,7 +1097,7 @@ def main(args):
                             snapshot_name, "w", encoding="utf-8"
                         ) as snapshot_file:
                             snapshot_file.write("\n".join(snapshot_lines) + "\n")
-                        status_message = f"保存: {snapshot_name}"
+                        status_message = f"Saved: {snapshot_name}"
                         updated = True
 
                 while True:
