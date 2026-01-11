@@ -148,11 +148,6 @@ int main(int argc, char *argv[]) {
             return 7;
         }
 
-        /* Ensure remaining microseconds is non-negative (guards against clock adjustments) */
-        if (remaining.tv_usec < 0) {
-            remaining.tv_usec = 0;
-        }
-
         /* Wait for data with remaining timeout */
         fd_set read_fds;
         FD_ZERO(&read_fds);
