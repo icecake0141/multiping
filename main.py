@@ -28,6 +28,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from scapy.all import ICMP, IP, sr  # type: ignore[attr-defined]
 
+
 # Get terminal size by querying the actual terminal, not env vars
 def get_terminal_size(fallback=(80, 24)):
     """
