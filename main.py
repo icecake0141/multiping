@@ -30,6 +30,12 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from scapy.all import ICMP, IP, sr  # type: ignore[attr-defined]
 
 
+# Constants for time navigation feature
+HISTORY_DURATION_MINUTES = 30  # Store up to 30 minutes of history
+SNAPSHOT_INTERVAL_SECONDS = 1.0  # Take snapshot every second
+ARROW_KEY_READ_TIMEOUT = 0.01  # Timeout for reading arrow key escape sequences
+
+
 # Get terminal size by querying the actual terminal, not env vars
 def get_terminal_size(fallback=(80, 24)):
     """
@@ -931,7 +937,7 @@ def read_key():
         # Check for escape sequence (arrow keys start with ESC)
         if char == '\x1b':
             # Check if more characters are available
-            ready, _, _ = select.select([sys.stdin], [], [], 0.01)
+            ready, _, _ = select.select([sys.stdin], [], [], ARROW_KEY_READ_TIMEOUT)
             if ready:
                 seq = sys.stdin.read(2)
                 if seq == '[A':
@@ -1110,11 +1116,12 @@ def main(args):
 
     # History navigation state
     # Store snapshots at regular intervals for time navigation
-    # Keep 30 minutes of history at 1-second intervals = 1800 snapshots max
-    history_buffer = deque(maxlen=1800)
+    max_history_snapshots = int(
+        HISTORY_DURATION_MINUTES * 60 / SNAPSHOT_INTERVAL_SECONDS
+    )
+    history_buffer = deque(maxlen=max_history_snapshots)
     history_offset = 0  # 0 = live, >0 = viewing history
     last_snapshot_time = 0.0
-    snapshot_interval = 1.0  # Take snapshot every second
 
     rdns_request_queue = queue.Queue()
     rdns_result_queue = queue.Queue()
@@ -1345,7 +1352,8 @@ def main(args):
                 now = time.time()
 
                 # Periodically save snapshots for history navigation
-                if history_offset == 0 and (now - last_snapshot_time) >= snapshot_interval:
+                if (history_offset == 0 and
+                        (now - last_snapshot_time) >= SNAPSHOT_INTERVAL_SECONDS):
                     snapshot = create_state_snapshot(buffers, stats, now)
                     history_buffer.append(snapshot)
                     last_snapshot_time = now
