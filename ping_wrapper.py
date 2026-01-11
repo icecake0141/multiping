@@ -102,7 +102,7 @@ def main():
         try:
             timeout_ms = int(sys.argv[2])
         except ValueError:
-            print(f"Error: timeout_ms must be an integer", file=sys.stderr)
+            print("Error: timeout_ms must be an integer", file=sys.stderr)
             sys.exit(1)
 
     try:
