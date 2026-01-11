@@ -831,34 +831,32 @@ class TestTerminalSize(unittest.TestCase):
 
     def test_get_terminal_size_ignores_env_vars(self):
         """Test that get_terminal_size ignores COLUMNS/LINES env vars"""
-        import os as os_module
-
         # Set environment variables
-        original_columns = os_module.environ.get("COLUMNS")
-        original_lines = os_module.environ.get("LINES")
+        original_columns = os.environ.get("COLUMNS")
+        original_lines = os.environ.get("LINES")
 
         try:
-            os_module.environ["COLUMNS"] = "50"
-            os_module.environ["LINES"] = "20"
+            os.environ["COLUMNS"] = "50"
+            os.environ["LINES"] = "20"
 
             # Our function should bypass env vars and query actual terminal
             # If running in a TTY, it should get the real size, not 50x20
             result = get_terminal_size(fallback=(80, 24))
 
-            # The result should either be the actual terminal size (not 50x20)
-            # or the fallback (80x24) if no TTY available
+            # The result should either be the actual terminal size
+            # (not 50x20) or the fallback (80x24) if no TTY available
             # It should NOT be 50x20 from the env vars
             self.assertNotEqual((result.columns, result.lines), (50, 20))
         finally:
             # Restore original env vars
             if original_columns is not None:
-                os_module.environ["COLUMNS"] = original_columns
+                os.environ["COLUMNS"] = original_columns
             else:
-                os_module.environ.pop("COLUMNS", None)
+                os.environ.pop("COLUMNS", None)
             if original_lines is not None:
-                os_module.environ["LINES"] = original_lines
+                os.environ["LINES"] = original_lines
             else:
-                os_module.environ.pop("LINES", None)
+                os.environ.pop("LINES", None)
 
 
 if __name__ == "__main__":
