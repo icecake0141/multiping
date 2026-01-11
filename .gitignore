@@ -1,3 +1,5 @@
+hosts.txt
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -11,6 +13,7 @@ __pycache__/
 .idea/
 
 # Dependency directories
+.venv/
 venv/
 env/
 */site-packages/
@@ -21,3 +24,4 @@ env/
 coverage.xml
 htmlcov/
 *.cover
+
