@@ -975,12 +975,12 @@ def ring_bell():
 def create_state_snapshot(buffers, stats, timestamp):
     """
     Create a deep copy snapshot of current buffers and stats.
-    
+
     Args:
         buffers: Current buffer state
         stats: Current statistics
         timestamp: Timestamp for this snapshot
-        
+
     Returns:
         Dict with snapshot data
     """
@@ -988,17 +988,23 @@ def create_state_snapshot(buffers, stats, timestamp):
     buffers_copy = {}
     for host_id, host_buffers in buffers.items():
         buffers_copy[host_id] = {
-            "timeline": deque(host_buffers["timeline"], maxlen=host_buffers["timeline"].maxlen),
-            "rtt_history": deque(host_buffers["rtt_history"], maxlen=host_buffers["rtt_history"].maxlen),
+            "timeline": deque(
+                host_buffers["timeline"],
+                maxlen=host_buffers["timeline"].maxlen
+            ),
+            "rtt_history": deque(
+                host_buffers["rtt_history"],
+                maxlen=host_buffers["rtt_history"].maxlen
+            ),
             "categories": {
                 status: deque(cat_deque, maxlen=cat_deque.maxlen)
                 for status, cat_deque in host_buffers["categories"].items()
             }
         }
-    
+
     # Deep copy stats
     stats_copy = copy.deepcopy(stats)
-    
+
     return {
         "timestamp": timestamp,
         "buffers": buffers_copy,
@@ -1101,7 +1107,7 @@ def main(args):
     asn_cache = {}
     asn_timeout = 3.0
     asn_failure_ttl = 300.0
-    
+
     # History navigation state
     # Store snapshots at regular intervals for time navigation
     # Keep 30 minutes of history at 1-second intervals = 1800 snapshots max
@@ -1109,7 +1115,7 @@ def main(args):
     history_offset = 0  # 0 = live, >0 = viewing history
     last_snapshot_time = 0.0
     snapshot_interval = 1.0  # Take snapshot every second
-    
+
     rdns_request_queue = queue.Queue()
     rdns_result_queue = queue.Queue()
     asn_request_queue = queue.Queue()
@@ -1337,13 +1343,13 @@ def main(args):
                         updated = True
 
                 now = time.time()
-                
+
                 # Periodically save snapshots for history navigation
                 if history_offset == 0 and (now - last_snapshot_time) >= snapshot_interval:
                     snapshot = create_state_snapshot(buffers, stats, now)
                     history_buffer.append(snapshot)
                     last_snapshot_time = now
-                
+
                 # Determine which buffers/stats to use for rendering
                 render_buffers = buffers
                 render_stats = stats
@@ -1355,7 +1361,7 @@ def main(args):
                         render_buffers = snapshot["buffers"]
                         render_stats = snapshot["stats"]
                         render_paused = True  # Show as paused when viewing history
-                
+
                 if force_render or (
                     not paused and (updated or (now - last_render) >= refresh_interval)
                 ):
