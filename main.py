@@ -22,11 +22,21 @@ def handle_options():
 def read_input_file(input_file):
 
     host_list = []
-    with open(input_file, 'r') as f:
-        for line in f:
-            line = line.strip()
-            if line and not line.startswith('#'):  # Skip empty lines and comments
-                host_list.append(line)
+    try:
+        with open(input_file, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#'):  # Skip empty lines and comments
+                    host_list.append(line)
+    except FileNotFoundError:
+        print(f"Error: Input file '{input_file}' not found.")
+        return []
+    except PermissionError:
+        print(f"Error: Permission denied reading file '{input_file}'.")
+        return []
+    except Exception as e:
+        print(f"Error reading input file '{input_file}': {e}")
+        return []
 
     return host_list
 
@@ -66,6 +76,9 @@ def ping_host(host, timeout, count, verbose):
             else:
                 if verbose:
                     print(f"No reply from {host}: seq={i+1}")
+        except OSError as e:
+            if verbose:
+                print(f"Network error pinging {host}: {e}")
         except Exception as e:
             if verbose:
                 print(f"Error pinging {host}: {e}")
@@ -74,6 +87,11 @@ def ping_host(host, timeout, count, verbose):
 
 def main(args):
 
+    # Validate count parameter
+    if args.count <= 0:
+        print("Error: Count must be a positive number.")
+        return
+    
     # Collect all hosts to ping
     all_hosts = []
     
