@@ -7,6 +7,7 @@ import shutil
 import socket
 import sys
 import termios
+import threading
 import time
 import tty
 from collections import deque
@@ -31,6 +32,13 @@ def handle_options():
         default='right',
         choices=['right', 'left', 'top', 'bottom', 'none'],
         help='Summary panel position (right|left|top|bottom|none)',
+    )
+    parser.add_argument(
+        '--pause-mode',
+        type=str,
+        default='display',
+        choices=['display', 'ping'],
+        help='Pause behavior: display (stop updates only) or ping (pause ping + updates)',
     )
     parser.add_argument('hosts', nargs='*', help='Hosts to ping (IP addresses or hostnames)')
 
@@ -66,7 +74,7 @@ def read_input_file(input_file):
 # Ping a single host
 
 
-def ping_host(host, timeout, count, slow_threshold, verbose):
+def ping_host(host, timeout, count, slow_threshold, verbose, pause_event=None):
     """
     Ping a single host with the specified parameters.
 
@@ -83,6 +91,9 @@ def ping_host(host, timeout, count, slow_threshold, verbose):
         print(f"\n--- Pinging {host} ---")
 
     for i in range(count):
+        if pause_event is not None:
+            while pause_event.is_set():
+                time.sleep(0.05)
         try:
             # Create ICMP packet
             icmp = IP(dst=host)/ICMP()
@@ -341,9 +352,11 @@ def render_main_view(
     height,
     mode_label,
     display_mode,
+    paused,
     header_lines=2,
 ):
-    header = f"MultiPing - Live results [{mode_label} | {display_mode}]"
+    pause_label = "PAUSED" if paused else "LIVE"
+    header = f"MultiPing - {pause_label} results [{mode_label} | {display_mode}]"
     if display_mode == "sparkline":
         return render_sparkline_view(
             display_entries, buffers, symbols, width, height, header, header_lines
@@ -418,7 +431,7 @@ def build_display_entries(
     return [(entry["host"], entry["label"]) for entry in entries]
 
 
-def build_status_line(sort_mode, filter_mode):
+def build_status_line(sort_mode, filter_mode, paused, status_message=None):
     sort_labels = {
         "failures": "失敗回数",
         "streak": "連続失敗",
@@ -426,7 +439,12 @@ def build_status_line(sort_mode, filter_mode):
         "host": "ホスト名",
     }
     filter_labels = {"failures": "失敗のみ", "latency": "高遅延のみ", "all": "全件"}
-    return f"ソート: {sort_labels.get(sort_mode, sort_mode)} | フィルタ: {filter_labels.get(filter_mode, filter_mode)}"
+    status = f"ソート: {sort_labels.get(sort_mode, sort_mode)} | フィルタ: {filter_labels.get(filter_mode, filter_mode)}"
+    if paused:
+        status += " | PAUSED"
+    if status_message:
+        status += f" | {status_message}"
+    return status
 
 
 def render_help_view(width, height):
@@ -436,16 +454,18 @@ def render_help_view(width, height):
         "Keys:",
         "  n : cycle display mode (ip/rdns/alias)",
         "  v : toggle view (timeline/sparkline)",
-        "  s : cycle sort (failures/streak/latency/host)",
+        "  o : cycle sort (failures/streak/latency/host)",
         "  f : cycle filter (failures/latency/all)",
         "  a : toggle ASN display",
+        "  p : pause/resume display",
+        "  s : save snapshot to file",
         "  h : toggle this help",
         "  q : quit",
     ]
     return pad_lines(lines, width, height)
 
 
-def render_display(
+def build_display_lines(
     hosts,
     host_infos,
     buffers,
@@ -459,6 +479,8 @@ def render_display(
     slow_threshold,
     show_help,
     show_asn,
+    paused,
+    status_message,
     asn_width=8,
     header_lines=2,
 ):
@@ -492,6 +514,7 @@ def render_display(
         main_height,
         mode_label,
         display_mode,
+        paused,
         header_lines,
     )
     summary_lines = render_summary_view(summary_data, summary_width, summary_height)
@@ -513,15 +536,57 @@ def render_display(
     else:
         combined_lines = main_lines
 
-    status_line = build_status_line(sort_mode, filter_mode)
+    status_line = build_status_line(sort_mode, filter_mode, paused, status_message)
     if combined_lines:
         combined_lines[-1] = status_line[:term_width].ljust(term_width)
+
+    return combined_lines
+
+
+def render_display(
+    hosts,
+    host_infos,
+    buffers,
+    stats,
+    symbols,
+    panel_position,
+    mode_label,
+    display_mode,
+    sort_mode,
+    filter_mode,
+    slow_threshold,
+    show_help,
+    show_asn,
+    paused,
+    status_message,
+    asn_width=8,
+    header_lines=2,
+):
+    combined_lines = build_display_lines(
+        hosts,
+        host_infos,
+        buffers,
+        stats,
+        symbols,
+        panel_position,
+        mode_label,
+        display_mode,
+        sort_mode,
+        filter_mode,
+        slow_threshold,
+        show_help,
+        show_asn,
+        paused,
+        status_message,
+        asn_width,
+        header_lines,
+    )
 
     print("\x1b[2J\x1b[H" + "\n".join(combined_lines), end="", flush=True)
 
 
-def worker_ping(host, timeout, count, slow_threshold, verbose, result_queue):
-    for result in ping_host(host, timeout, count, slow_threshold, verbose):
+def worker_ping(host, timeout, count, slow_threshold, verbose, pause_event, result_queue):
+    for result in ping_host(host, timeout, count, slow_threshold, verbose, pause_event):
         result_queue.put(result)
     result_queue.put({"host": host, "status": "done"})
 
@@ -677,6 +742,11 @@ def main(args):
     filter_modes = ["failures", "latency", "all"]
     filter_mode_index = 2
     running = True
+    paused = False
+    pause_mode = args.pause_mode
+    pause_event = threading.Event()
+    status_message = None
+    force_render = False
     show_asn = True
     rdns_timeout = 2.0
     rdns_futures = {}
@@ -711,6 +781,7 @@ def main(args):
                 args.count,
                 args.slow_threshold,
                 args.verbose,
+                pause_event,
                 result_queue,
             )
 
@@ -735,7 +806,7 @@ def main(args):
                     elif key == "v":
                         display_mode_index = (display_mode_index + 1) % len(display_modes)
                         updated = True
-                    elif key == "s":
+                    elif key == "o":
                         sort_mode_index = (sort_mode_index + 1) % len(sort_modes)
                         updated = True
                     elif key == "f":
@@ -744,6 +815,39 @@ def main(args):
                     elif key == "a":
                         show_asn = not show_asn
                         updated = True
+                    elif key == "p":
+                        paused = not paused
+                        status_message = "一時停止中" if paused else "再開しました"
+                        if pause_mode == "ping":
+                            if paused:
+                                pause_event.set()
+                            else:
+                                pause_event.clear()
+                        force_render = True
+                        updated = True
+                    elif key == "s":
+                        snapshot_name = time.strftime("multiping_snapshot_%Y%m%d_%H%M%S.txt")
+                        snapshot_lines = build_display_lines(
+                            all_hosts,
+                            host_infos,
+                            buffers,
+                            stats,
+                            symbols,
+                            args.panel_position,
+                            modes[mode_index],
+                            display_modes[display_mode_index],
+                            sort_modes[sort_mode_index],
+                            filter_modes[filter_mode_index],
+                            args.slow_threshold,
+                            show_help,
+                            show_asn,
+                            paused,
+                            status_message,
+                        )
+                        with open(snapshot_name, "w", encoding="utf-8") as snapshot_file:
+                            snapshot_file.write("\n".join(snapshot_lines) + "\n")
+                        status_message = f"保存: {snapshot_name}"
+                        updated = True
 
                 for host, future in list(rdns_futures.items()):
                     if host_infos[host]["rdns_state"] != "pending":
@@ -751,11 +855,13 @@ def main(args):
                     if future.done():
                         host_infos[host]["rdns"] = future.result()
                         host_infos[host]["rdns_state"] = "resolved"
-                        updated = True
+                        if not paused:
+                            updated = True
                     elif time.time() - rdns_started[host] >= rdns_timeout:
                         future.cancel()
                         host_infos[host]["rdns_state"] = "timeout"
-                        updated = True
+                        if not paused:
+                            updated = True
 
                 for host, future in list(asn_futures.items()):
                     if host_infos[host]["asn_state"] != "pending":
@@ -765,11 +871,13 @@ def main(args):
                         host_infos[host]["asn"] = asn_value
                         host_infos[host]["asn_state"] = "resolved" if asn_value else "failed"
                         asn_cache[host_infos[host]["ip"]] = asn_value
-                        updated = True
+                        if not paused:
+                            updated = True
                     elif time.time() - asn_started[host] >= asn_timeout:
                         future.cancel()
                         host_infos[host]["asn_state"] = "timeout"
-                        updated = True
+                        if not paused:
+                            updated = True
 
                 while True:
                     try:
@@ -790,10 +898,11 @@ def main(args):
                     if result.get("rtt") is not None:
                         stats[host]["rtt_sum"] += result["rtt"]
                         stats[host]["rtt_count"] += 1
-                    updated = True
+                    if not paused:
+                        updated = True
 
                 now = time.time()
-                if updated or (now - last_render) >= refresh_interval:
+                if force_render or (not paused and (updated or (now - last_render) >= refresh_interval)):
                     render_display(
                         all_hosts,
                         host_infos,
@@ -808,9 +917,12 @@ def main(args):
                         args.slow_threshold,
                         show_help,
                         show_asn,
+                        paused,
+                        status_message,
                     )
                     last_render = now
                     updated = False
+                    force_render = False
 
                 time.sleep(0.05)
         finally:
