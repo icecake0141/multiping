@@ -329,15 +329,33 @@ def render_summary_view(summary_data, width, height):
             streak_label = f"F{entry['streak_length']}"
         elif entry["streak_type"] == "success":
             streak_label = f"S{entry['streak_length']}"
-        line = (
-            f"{entry['host']}: ok {entry['success_rate']:.1f}% "
-            f"loss {entry['loss_rate']:.1f}% streak {streak_label}"
-        )
-        lines.append(line)
-        if entry["avg_rtt_ms"] is not None:
-            lines.append(f"  avg rtt {entry['avg_rtt_ms']:.1f} ms")
+        
+        # Build the status suffix (everything except hostname)
+        status_suffix = f": ok {entry['success_rate']:.1f}% loss {entry['loss_rate']:.1f}% streak {streak_label}"
+        
+        # Calculate available space for hostname
+        available_for_host = width - len(status_suffix)
+        
+        if available_for_host > 0:
+            # Truncate hostname to fit, preserving the status info
+            host_display = entry['host'][:available_for_host]
+            full_line = f"{host_display}{status_suffix}"
         else:
-            lines.append("  avg rtt n/a")
+            # Not enough room for both hostname and status, just show what fits
+            full_line = (
+                f"{entry['host']}: ok {entry['success_rate']:.1f}% "
+                f"loss {entry['loss_rate']:.1f}% streak {streak_label}"
+            )
+        
+        # Ensure the line doesn't exceed width
+        lines.append(full_line[:width])
+        
+        # Format the avg rtt line
+        if entry["avg_rtt_ms"] is not None:
+            rtt_line = f"  avg rtt {entry['avg_rtt_ms']:.1f} ms"
+        else:
+            rtt_line = "  avg rtt n/a"
+        lines.append(rtt_line[:width])
 
     return pad_lines(lines, width, height)
 
