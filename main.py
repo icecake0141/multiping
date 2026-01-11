@@ -220,23 +220,25 @@ def ping_host(host, timeout, count, slow_threshold, verbose, pause_event=None, i
                 sent, received = ans[0]
                 rtt = received.time - sent.time
                 status = "slow" if rtt >= slow_threshold else "success"
+                # Extract TTL from the received IP packet
+                ttl = received[IP].ttl if IP in received else None
                 if verbose:
-                    print(f"Reply from {host}: seq={i+1} rtt={rtt:.3f}s")
+                    print(f"Reply from {host}: seq={i+1} rtt={rtt:.3f}s ttl={ttl}")
                     for r in ans:
                         r[1].show()
-                yield {"host": host, "sequence": i + 1, "status": status, "rtt": rtt}
+                yield {"host": host, "sequence": i + 1, "status": status, "rtt": rtt, "ttl": ttl}
             else:
                 if verbose:
                     print(f"No reply from {host}: seq={i+1}")
-                yield {"host": host, "sequence": i + 1, "status": "fail", "rtt": None}
+                yield {"host": host, "sequence": i + 1, "status": "fail", "rtt": None, "ttl": None}
         except OSError as e:
             if verbose:
                 print(f"Network error pinging {host}: {e}")
-            yield {"host": host, "sequence": i + 1, "status": "fail", "rtt": None}
+            yield {"host": host, "sequence": i + 1, "status": "fail", "rtt": None, "ttl": None}
         except Exception as e:
             if verbose:
                 print(f"Error pinging {host}: {e}")
-            yield {"host": host, "sequence": i + 1, "status": "fail", "rtt": None}
+            yield {"host": host, "sequence": i + 1, "status": "fail", "rtt": None, "ttl": None}
 
         i += 1
 
@@ -301,6 +303,10 @@ def resize_buffers(buffers, timeline_width, symbols):
             host_buffers["rtt_history"] = deque(
                 host_buffers["rtt_history"], maxlen=timeline_width
             )
+        if host_buffers["ttl_history"].maxlen != timeline_width:
+            host_buffers["ttl_history"] = deque(
+                host_buffers["ttl_history"], maxlen=timeline_width
+            )
         for status in symbols:
             if host_buffers["categories"][status].maxlen != timeline_width:
                 host_buffers["categories"][status] = deque(
@@ -348,6 +354,12 @@ def compute_summary_data(host_infos, display_names, buffers, stats, symbols):
         avg_rtt_ms = None
         if stats[host_id]["rtt_count"] > 0:
             avg_rtt_ms = stats[host_id]["rtt_sum"] / stats[host_id]["rtt_count"] * 1000
+        # Calculate TTL statistics
+        ttl_min = stats[host_id]["ttl_min"]
+        ttl_max = stats[host_id]["ttl_max"]
+        ttl_avg = None
+        if stats[host_id]["ttl_count"] > 0:
+            ttl_avg = stats[host_id]["ttl_sum"] / stats[host_id]["ttl_count"]
         summary.append(
             {
                 "host": display_name,
@@ -356,6 +368,9 @@ def compute_summary_data(host_infos, display_names, buffers, stats, symbols):
                 "streak_type": streak_type,
                 "streak_length": streak_length,
                 "avg_rtt_ms": avg_rtt_ms,
+                "ttl_min": ttl_min,
+                "ttl_max": ttl_max,
+                "ttl_avg": ttl_avg,
             }
         )
     return summary
@@ -381,6 +396,18 @@ def render_summary_view(summary_data, width, height):
             lines.append(f"  avg rtt {entry['avg_rtt_ms']:.1f} ms")
         else:
             lines.append("  avg rtt n/a")
+        # Add TTL information
+        if entry["ttl_min"] is not None and entry["ttl_max"] is not None:
+            if entry["ttl_avg"] is not None:
+                ttl_line = (
+                    f"  ttl min/avg/max "
+                    f"{entry['ttl_min']}/{entry['ttl_avg']:.1f}/{entry['ttl_max']}"
+                )
+                lines.append(ttl_line)
+            else:
+                lines.append(f"  ttl min/max {entry['ttl_min']}/{entry['ttl_max']}")
+        else:
+            lines.append("  ttl n/a")
 
     return pad_lines(lines, width, height)
 
@@ -968,6 +995,7 @@ def main(args):
         info["id"]: {
             "timeline": deque(maxlen=timeline_width),
             "rtt_history": deque(maxlen=timeline_width),
+            "ttl_history": deque(maxlen=timeline_width),
             "categories": {status: deque(maxlen=timeline_width) for status in symbols},
         }
         for info in host_infos
@@ -980,6 +1008,10 @@ def main(args):
             "total": 0,
             "rtt_sum": 0.0,
             "rtt_count": 0,
+            "ttl_min": None,
+            "ttl_max": None,
+            "ttl_sum": 0,
+            "ttl_count": 0,
         }
         for info in host_infos
     }
@@ -1198,12 +1230,22 @@ def main(args):
                     status = result["status"]
                     buffers[host_id]["timeline"].append(symbols[status])
                     buffers[host_id]["rtt_history"].append(result.get("rtt"))
+                    buffers[host_id]["ttl_history"].append(result.get("ttl"))
                     buffers[host_id]["categories"][status].append(result["sequence"])
                     stats[host_id][status] += 1
                     stats[host_id]["total"] += 1
                     if result.get("rtt") is not None:
                         stats[host_id]["rtt_sum"] += result["rtt"]
                         stats[host_id]["rtt_count"] += 1
+                    # Update TTL statistics
+                    if result.get("ttl") is not None:
+                        ttl = result["ttl"]
+                        if stats[host_id]["ttl_min"] is None or ttl < stats[host_id]["ttl_min"]:
+                            stats[host_id]["ttl_min"] = ttl
+                        if stats[host_id]["ttl_max"] is None or ttl > stats[host_id]["ttl_max"]:
+                            stats[host_id]["ttl_max"] = ttl
+                        stats[host_id]["ttl_sum"] += ttl
+                        stats[host_id]["ttl_count"] += 1
                     if not paused:
                         updated = True
 

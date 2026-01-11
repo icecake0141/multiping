@@ -155,6 +155,11 @@ class TestPingHost(unittest.TestCase):
         mock_sent.time = 0.0
         mock_received = MagicMock()
         mock_received.time = 0.001
+        # Mock IP layer with TTL
+        mock_ip_layer = MagicMock()
+        mock_ip_layer.ttl = 64
+        mock_received.__getitem__ = MagicMock(return_value=mock_ip_layer)
+        mock_received.__contains__ = MagicMock(return_value=True)
         mock_sr.return_value = ([[mock_sent, mock_received]], [])
 
         results = list(ping_host("example.com", 1, 4, 0.5, False))
@@ -163,6 +168,7 @@ class TestPingHost(unittest.TestCase):
         for result in results:
             self.assertEqual(result["host"], "example.com")
             self.assertIn(result["status"], ["success", "slow"])
+            self.assertEqual(result.get("ttl"), 64)
 
     @patch("main.ICMP")
     @patch("main.IP")
@@ -182,6 +188,7 @@ class TestPingHost(unittest.TestCase):
         for result in results:
             self.assertEqual(result["host"], "example.com")
             self.assertEqual(result["status"], "fail")
+            self.assertIsNone(result.get("ttl"))
 
     @patch("main.ICMP")
     @patch("main.IP")
@@ -197,6 +204,11 @@ class TestPingHost(unittest.TestCase):
         mock_sent.time = 0.0
         mock_received = MagicMock()
         mock_received.time = 0.001
+        # Mock IP layer with TTL
+        mock_ip_layer = MagicMock()
+        mock_ip_layer.ttl = 64
+        mock_received.__getitem__ = MagicMock(return_value=mock_ip_layer)
+        mock_received.__contains__ = MagicMock(return_value=True)
         mock_sr.side_effect = [
             ([[mock_sent, mock_received]], []),
             ([], [MagicMock()]),
@@ -229,6 +241,33 @@ class TestPingHost(unittest.TestCase):
         for result in results:
             self.assertEqual(result["host"], "example.com")
             self.assertEqual(result["status"], "fail")
+            self.assertIsNone(result.get("ttl"))
+
+    @patch("main.ICMP")
+    @patch("main.IP")
+    @patch("main.sr")
+    def test_ping_host_ttl_extraction(self, mock_sr, mock_ip, mock_icmp):
+        """Test TTL extraction from ICMP echo reply"""
+        # Mock IP and ICMP packet creation
+        mock_packet = MagicMock()
+        mock_ip.return_value.__truediv__ = MagicMock(return_value=mock_packet)
+
+        # Mock successful ping response with TTL=128
+        mock_sent = MagicMock()
+        mock_sent.time = 0.0
+        mock_received = MagicMock()
+        mock_received.time = 0.001
+        # Mock IP layer with TTL=128
+        mock_ip_layer = MagicMock()
+        mock_ip_layer.ttl = 128
+        mock_received.__getitem__ = MagicMock(return_value=mock_ip_layer)
+        mock_received.__contains__ = MagicMock(return_value=True)
+        mock_sr.return_value = ([[mock_sent, mock_received]], [])
+
+        results = list(ping_host("example.com", 1, 1, 0.5, False))
+
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["ttl"], 128)
 
 
 class TestMain(unittest.TestCase):
@@ -571,6 +610,7 @@ class TestSummaryData(unittest.TestCase):
             0: {
                 "timeline": deque([".", ".", "x", "."]),
                 "rtt_history": deque([0.01, 0.02, None, 0.015]),
+                "ttl_history": deque([64, 64, None, 64]),
                 "categories": {
                     "success": deque([1, 2, 4]),
                     "slow": deque([]),
@@ -586,6 +626,10 @@ class TestSummaryData(unittest.TestCase):
                 "total": 4,
                 "rtt_sum": 0.045,
                 "rtt_count": 3,
+                "ttl_min": 64,
+                "ttl_max": 64,
+                "ttl_sum": 192,
+                "ttl_count": 3,
             }
         }
         symbols = {"success": ".", "fail": "x", "slow": "!"}
@@ -597,6 +641,9 @@ class TestSummaryData(unittest.TestCase):
         self.assertEqual(summary[0]["success_rate"], 75.0)
         self.assertEqual(summary[0]["loss_rate"], 25.0)
         self.assertIsNotNone(summary[0]["avg_rtt_ms"])
+        self.assertEqual(summary[0]["ttl_min"], 64)
+        self.assertEqual(summary[0]["ttl_max"], 64)
+        self.assertAlmostEqual(summary[0]["ttl_avg"], 64.0)
 
     def test_compute_summary_data_all_success(self):
         """Test summary with all successful pings"""
@@ -606,6 +653,7 @@ class TestSummaryData(unittest.TestCase):
             0: {
                 "timeline": deque([".", ".", ".", "."]),
                 "rtt_history": deque([0.01, 0.02, 0.015, 0.018]),
+                "ttl_history": deque([64, 63, 64, 64]),
                 "categories": {
                     "success": deque([1, 2, 3, 4]),
                     "slow": deque([]),
@@ -621,9 +669,22 @@ class TestSummaryData(unittest.TestCase):
                 "total": 4,
                 "rtt_sum": 0.063,
                 "rtt_count": 4,
+                "ttl_min": 63,
+                "ttl_max": 64,
+                "ttl_sum": 255,
+                "ttl_count": 4,
             }
         }
         symbols = {"success": ".", "fail": "x", "slow": "!"}
+
+        summary = compute_summary_data(host_infos, display_names, buffers, stats, symbols)
+
+        self.assertEqual(summary[0]["success_rate"], 100.0)
+        self.assertEqual(summary[0]["loss_rate"], 0.0)
+        self.assertEqual(summary[0]["streak_type"], "success")
+        self.assertEqual(summary[0]["ttl_min"], 63)
+        self.assertEqual(summary[0]["ttl_max"], 64)
+        self.assertAlmostEqual(summary[0]["ttl_avg"], 63.75)
 
         summary = compute_summary_data(host_infos, display_names, buffers, stats, symbols)
 
