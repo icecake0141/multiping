@@ -11,7 +11,7 @@
 # Review required for correctness, security, and licensing.
 
 CC = gcc
-CFLAGS = -Wall -O2
+CFLAGS = -Wall -Wextra -O2
 TARGET = ping_helper
 SRC = ping_helper.c
 

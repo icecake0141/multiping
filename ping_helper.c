@@ -19,6 +19,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netinet/ip.h>
 #include <netinet/ip_icmp.h>
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -38,7 +39,7 @@ unsigned short checksum(void *b, int len) {
         sum += *buf++;
     }
     if (len == 1) {
-        sum += *(unsigned char *)buf;
+        sum += (*(unsigned char *)buf) << 8;
     }
     sum = (sum >> 16) + (sum & 0xFFFF);
     sum += (sum >> 16);
