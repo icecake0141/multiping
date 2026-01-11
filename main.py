@@ -147,6 +147,16 @@ def handle_options():
         help="Timezone used in snapshot filename (utc|display). Defaults to utc.",
     )
     parser.add_argument(
+        "--flash-on-fail",
+        action="store_true",
+        help="Flash screen (invert colors) when ping fails",
+    )
+    parser.add_argument(
+        "--bell-on-fail",
+        action="store_true",
+        help="Ring terminal bell when ping fails",
+    )
+    parser.add_argument(
         "hosts", nargs="*", help="Hosts to ping (IP addresses or hostnames)"
     )
 
@@ -915,6 +925,23 @@ def read_key():
     return None
 
 
+def flash_screen():
+    """Flash the screen by inverting colors for ~100ms"""
+    # Save cursor position and invert colors (white bg, black fg)
+    sys.stdout.write("\x1b7\x1b[7m\x1b[2J\x1b[H")
+    sys.stdout.flush()
+    time.sleep(0.1)
+    # Restore normal colors and cursor position
+    sys.stdout.write("\x1b[27m\x1b8")
+    sys.stdout.flush()
+
+
+def ring_bell():
+    """Ring the terminal bell"""
+    sys.stdout.write("\a")
+    sys.stdout.flush()
+
+
 def main(args):
 
     # Validate count parameter - allow 0 for infinite
@@ -1204,6 +1231,14 @@ def main(args):
                     if result.get("rtt") is not None:
                         stats[host_id]["rtt_sum"] += result["rtt"]
                         stats[host_id]["rtt_count"] += 1
+
+                    # Trigger flash or bell on ping failure
+                    if status == "fail":
+                        if args.flash_on_fail:
+                            flash_screen()
+                        if args.bell_on_fail:
+                            ring_bell()
+
                     if not paused:
                         updated = True
 

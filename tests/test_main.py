@@ -44,6 +44,8 @@ from main import (
     build_sparkline,
     build_status_line,
     get_terminal_size,
+    flash_screen,
+    ring_bell,
 )  # noqa: E402
 
 
@@ -989,6 +991,57 @@ class TestTerminalSize(unittest.TestCase):
                 os.environ["LINES"] = original_lines
             else:
                 os.environ.pop("LINES", None)
+
+
+class TestFlashAndBell(unittest.TestCase):
+    """Test flash and bell notification features"""
+
+    def test_handle_options_flash_on_fail(self):
+        """Test --flash-on-fail option parsing"""
+        with patch("sys.argv", ["main.py", "--flash-on-fail", "example.com"]):
+            args = handle_options()
+            self.assertTrue(args.flash_on_fail)
+
+    def test_handle_options_bell_on_fail(self):
+        """Test --bell-on-fail option parsing"""
+        with patch("sys.argv", ["main.py", "--bell-on-fail", "example.com"]):
+            args = handle_options()
+            self.assertTrue(args.bell_on_fail)
+
+    def test_handle_options_both_flags(self):
+        """Test both flash and bell options together"""
+        with patch("sys.argv", ["main.py", "--flash-on-fail", "--bell-on-fail", "example.com"]):
+            args = handle_options()
+            self.assertTrue(args.flash_on_fail)
+            self.assertTrue(args.bell_on_fail)
+
+    def test_handle_options_default_false(self):
+        """Test that flash and bell options default to False"""
+        with patch("sys.argv", ["main.py", "example.com"]):
+            args = handle_options()
+            self.assertFalse(args.flash_on_fail)
+            self.assertFalse(args.bell_on_fail)
+
+    @patch("main.sys.stdout")
+    @patch("main.time.sleep")
+    def test_flash_screen(self, mock_sleep, mock_stdout):
+        """Test flash_screen function"""
+        flash_screen()
+        # Should have called write to send escape sequences
+        self.assertGreaterEqual(mock_stdout.write.call_count, 2)
+        # Should have slept for ~0.1 seconds
+        mock_sleep.assert_called_once_with(0.1)
+        # Should have called flush
+        self.assertGreaterEqual(mock_stdout.flush.call_count, 2)
+
+    @patch("main.sys.stdout")
+    def test_ring_bell(self, mock_stdout):
+        """Test ring_bell function"""
+        ring_bell()
+        # Should write the bell character
+        mock_stdout.write.assert_called_once_with("\a")
+        # Should flush the output
+        mock_stdout.flush.assert_called_once()
 
 
 if __name__ == "__main__":
