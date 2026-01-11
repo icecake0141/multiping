@@ -1028,13 +1028,13 @@ def main(args):
             while running and (not expect_completion or completed_hosts < len(host_infos)):
                 key = read_key()
                 if key:
-                    if show_help:
+                    if key == "q":
+                        running = False
+                    elif show_help:
                         show_help = False
                         force_render = True
                         updated = True
                         continue
-                    if key == "q":
-                        running = False
                     elif key in ("H", "h"):
                         show_help = True
                         force_render = True
