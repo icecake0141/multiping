@@ -239,7 +239,7 @@ def ping_host(host, timeout, count, slow_threshold, verbose, pause_event=None, i
                 status = "slow" if rtt >= slow_threshold else "success"
                 # Extract TTL from the IP layer of the received packet
                 try:
-                    ttl = received[IP].ttl if IP in received else None
+                    ttl = received[IP].ttl
                 except (KeyError, AttributeError):
                     ttl = None
                 if verbose:
