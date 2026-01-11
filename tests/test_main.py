@@ -38,6 +38,7 @@ from main import (
     build_display_names,
     format_display_name,
     compute_summary_data,
+    render_summary_view,
     format_timestamp,
     format_timezone_label,
     build_host_infos,
@@ -634,6 +635,86 @@ class TestSummaryData(unittest.TestCase):
         self.assertEqual(summary[0]["success_rate"], 100.0)
         self.assertEqual(summary[0]["loss_rate"], 0.0)
         self.assertEqual(summary[0]["streak_type"], "success")
+
+    def test_render_summary_view_fits_width(self):
+        """Test that summary view lines don't exceed specified width"""
+        summary_data = [
+            {
+                "host": "very-long-hostname-with-asn-info.example.com AS12345",
+                "success_rate": 95.5,
+                "loss_rate": 4.5,
+                "streak_type": "success",
+                "streak_length": 10,
+                "avg_rtt_ms": 42.3,
+            }
+        ]
+
+        width = 40
+        height = 10
+        lines = render_summary_view(summary_data, width, height)
+
+        # All lines should be exactly 'width' characters
+        for line in lines:
+            self.assertEqual(
+                len(line), width,
+                f"Line '{line}' has length {len(line)}, expected {width}"
+            )
+
+    def test_render_summary_view_truncates_long_hostnames(self):
+        """Test that long hostnames are truncated to fit"""
+        summary_data = [
+            {
+                "host": "extremely-long-hostname-that-definitely-exceeds-width.example.com AS99999",
+                "success_rate": 100.0,
+                "loss_rate": 0.0,
+                "streak_type": "success",
+                "streak_length": 5,
+                "avg_rtt_ms": 25.0,
+            }
+        ]
+
+        # Use a reasonable width that can fit the status info
+        width = 50
+        height = 10
+        lines = render_summary_view(summary_data, width, height)
+
+        # Check all lines fit within width
+        for line in lines:
+            self.assertEqual(len(line), width)
+
+        # The host info line should contain essential info when width is sufficient
+        host_line = lines[2]  # First line is "Summary", second is separator
+        self.assertIn("ok", host_line)
+        self.assertIn("%", host_line)
+
+    def test_render_summary_view_multiple_hosts(self):
+        """Test summary view with multiple hosts respects width"""
+        summary_data = [
+            {
+                "host": "host1.example.com AS1111",
+                "success_rate": 100.0,
+                "loss_rate": 0.0,
+                "streak_type": "success",
+                "streak_length": 3,
+                "avg_rtt_ms": 10.5,
+            },
+            {
+                "host": "very-long-host2.example.com AS22222",
+                "success_rate": 90.0,
+                "loss_rate": 10.0,
+                "streak_type": "fail",
+                "streak_length": 2,
+                "avg_rtt_ms": 45.2,
+            },
+        ]
+
+        width = 35
+        height = 20
+        lines = render_summary_view(summary_data, width, height)
+
+        # All lines should fit within width
+        for line in lines:
+            self.assertEqual(len(line), width)
 
 
 class TestTimezoneFormatting(unittest.TestCase):
