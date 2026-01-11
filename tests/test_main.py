@@ -236,7 +236,7 @@ class TestMain(unittest.TestCase):
 
     @patch("main.queue.Queue")
     @patch("main.sys.stdin")
-    @patch("main.shutil.get_terminal_size")
+    @patch("main.get_terminal_size")
     @patch("main.ThreadPoolExecutor")
     @patch("main.threading.Thread")
     def test_main_with_hosts(
@@ -333,7 +333,7 @@ class TestMain(unittest.TestCase):
 
     @patch("main.queue.Queue")
     @patch("main.sys.stdin")
-    @patch("main.shutil.get_terminal_size")
+    @patch("main.get_terminal_size")
     @patch("main.read_input_file")
     @patch("main.ThreadPoolExecutor")
     @patch("main.threading.Thread")
