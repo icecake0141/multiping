@@ -6,6 +6,7 @@ Unit tests for multiping functionality
 import unittest
 from unittest.mock import patch, MagicMock, mock_open
 import argparse
+import queue
 import sys
 import os
 
@@ -203,11 +204,12 @@ class TestMain(unittest.TestCase):
             panel_position='right'
         )
 
-        # Mock queue to return "done" status for each host
+        # Mock queue to return "done" status for each host, then raise Empty
         mock_queue_instance = MagicMock()
-        mock_queue_instance.get.side_effect = [
+        mock_queue_instance.get_nowait.side_effect = [
             {"host": "host1.com", "status": "done"},
-            {"host": "host2.com", "status": "done"}
+            {"host": "host2.com", "status": "done"},
+            queue.Empty,  # After all done, raise Empty to exit loop
         ]
         mock_queue.return_value = mock_queue_instance
 
@@ -270,11 +272,12 @@ class TestMain(unittest.TestCase):
             panel_position='right'
         )
 
-        # Mock queue to return "done" status for each host
+        # Mock queue to return "done" status for each host, then raise Empty
         mock_queue_instance = MagicMock()
-        mock_queue_instance.get.side_effect = [
+        mock_queue_instance.get_nowait.side_effect = [
             {"host": "host1.com", "status": "done"},
-            {"host": "host2.com", "status": "done"}
+            {"host": "host2.com", "status": "done"},
+            queue.Empty,  # After all done, raise Empty to exit loop
         ]
         mock_queue.return_value = mock_queue_instance
 
