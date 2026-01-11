@@ -44,6 +44,9 @@ python -m pip install -r requirements.txt
 ```
 
 ## 使い方
+
+![MultiPing デモ](docs/images/usage-demo.gif)
+
 ```bash
 python main.py [options] <host1> <host2> ...
 ```
