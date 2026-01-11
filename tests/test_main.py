@@ -766,7 +766,9 @@ class TestTerminalSize(unittest.TestCase):
 
     @patch("main.os.get_terminal_size")
     @patch("main.sys.stdout")
-    def test_get_terminal_size_from_stdout(self, mock_stdout, mock_os_get_size):
+    def test_get_terminal_size_from_stdout(
+        self, mock_stdout, mock_os_get_size
+    ):
         """Test getting terminal size from stdout"""
         mock_stdout.isatty.return_value = True
         mock_stdout.fileno.return_value = 1
@@ -814,7 +816,9 @@ class TestTerminalSize(unittest.TestCase):
 
     @patch("main.os.get_terminal_size")
     @patch("main.sys.stdout")
-    def test_get_terminal_size_handles_os_error(self, mock_stdout, mock_os_get_size):
+    def test_get_terminal_size_handles_os_error(
+        self, mock_stdout, mock_os_get_size
+    ):
         """Test handling of OSError when querying terminal size"""
         mock_stdout.isatty.return_value = True
         mock_stdout.fileno.return_value = 1

@@ -29,18 +29,20 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from scapy.all import ICMP, IP, sr  # type: ignore[attr-defined]
 
 
-# Get terminal size by querying the actual terminal, not environment variables
+# Get terminal size by querying the actual terminal, not env vars
 def get_terminal_size(fallback=(80, 24)):
     """
     Get the terminal size by directly querying the terminal.
-    
-    This function uses os.get_terminal_size() which queries the actual terminal
-    instead of checking COLUMNS/LINES environment variables first (like shutil does).
-    This ensures the size updates when the terminal is resized.
-    
+
+    This function uses os.get_terminal_size() which queries the actual
+    terminal instead of checking COLUMNS/LINES environment variables
+    first (like shutil does). This ensures the size updates when the
+    terminal is resized.
+
     Args:
-        fallback: Tuple of (columns, lines) to use if terminal size cannot be determined
-    
+        fallback: Tuple of (columns, lines) to use if terminal size
+                  cannot be determined
+
     Returns:
         os.terminal_size with columns and lines attributes
     """
@@ -50,21 +52,21 @@ def get_terminal_size(fallback=(80, 24)):
             return os.get_terminal_size(sys.stdout.fileno())
     except (AttributeError, ValueError, OSError):
         pass
-    
+
     try:
         # Try stderr if stdout fails
         if sys.stderr.isatty():
             return os.get_terminal_size(sys.stderr.fileno())
     except (AttributeError, ValueError, OSError):
         pass
-    
+
     try:
         # Try stdin as last resort
         if sys.stdin.isatty():
             return os.get_terminal_size(sys.stdin.fileno())
     except (AttributeError, ValueError, OSError):
         pass
-    
+
     # Fall back to default size
     return os.terminal_size(fallback)
 
