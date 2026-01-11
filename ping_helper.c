@@ -182,6 +182,12 @@ int main(int argc, char *argv[]) {
             return 8;
         }
 
+        /* First check if we received at least a minimal IP header */
+        if (recv_len < 20) {
+            /* Packet too short for even minimum IP header, skip it */
+            continue;
+        }
+
         /* Parse IP header to get to ICMP header */
         struct ip *ip_hdr = (struct ip *)recv_buf;
         int ip_header_len = ip_hdr->ip_hl * 4;
@@ -192,6 +198,7 @@ int main(int argc, char *argv[]) {
             continue;
         }
         
+        /* Now verify the packet is long enough for this IP header + ICMP header */
         if (recv_len < ip_header_len + ICMP_HEADER_SIZE) {
             /* Packet too short, skip it and continue waiting */
             continue;
