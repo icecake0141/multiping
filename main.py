@@ -946,15 +946,27 @@ def resolve_rdns(ip_address):
         return None
 
 
-def resolve_asn(ip_address, timeout=3.0):
+def resolve_asn(ip_address, timeout=3.0, max_bytes=65536):
     query = f" -v {ip_address}\n".encode("utf-8")
     try:
         with socket.create_connection(("whois.cymru.com", 43), timeout=timeout) as sock:
+            sock.settimeout(timeout)
             sock.sendall(query)
-            response = sock.recv(4096).decode("utf-8", errors="ignore")
+            chunks = []
+            total_read = 0
+            while True:
+                remaining = max_bytes - total_read
+                if remaining <= 0:
+                    break
+                chunk = sock.recv(min(4096, remaining))
+                if not chunk:
+                    break
+                chunks.append(chunk)
+                total_read += len(chunk)
     except (socket.timeout, OSError):
         return None
 
+    response = b"".join(chunks).decode("utf-8", errors="ignore")
     lines = [line for line in response.splitlines() if line.strip()]
     if len(lines) < 2:
         return None
@@ -1047,6 +1059,8 @@ def read_key():
 
 def flash_screen():
     """Flash the screen by inverting colors for ~100ms"""
+    if not sys.stdout.isatty():
+        return
     # ANSI escape sequences for visual flash effect
     SAVE_CURSOR = "\x1b7"           # Save cursor position
     INVERT_COLORS = "\x1b[7m"       # Invert colors (white bg, black fg)
@@ -1067,6 +1081,8 @@ def flash_screen():
 
 def ring_bell():
     """Ring the terminal bell"""
+    if not sys.stdout.isatty():
+        return
     sys.stdout.write("\a")
     sys.stdout.flush()
 
@@ -1120,6 +1136,9 @@ def main(args):
     # Validate count parameter - allow 0 for infinite
     if args.count < 0:
         print("Error: Count must be a non-negative number (0 for infinite).")
+        return
+    if args.timeout <= 0:
+        print("Error: Timeout must be a positive number of seconds.")
         return
 
     # Validate interval parameter

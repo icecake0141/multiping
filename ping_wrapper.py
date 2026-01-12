@@ -50,6 +50,9 @@ def ping_with_helper(host, timeout_ms=1000, helper_path="./ping_helper"):
     Raises:
         FileNotFoundError: If the ping_helper binary is not found
     """
+    if timeout_ms <= 0:
+        raise ValueError("timeout_ms must be a positive integer in milliseconds.")
+
     if not os.path.exists(helper_path):
         raise FileNotFoundError(
             f"ping_helper binary not found at {helper_path}. "
@@ -129,6 +132,9 @@ def main():
             timeout_ms = int(sys.argv[2])
         except ValueError:
             print("Error: timeout_ms must be an integer", file=sys.stderr)
+            sys.exit(1)
+        if timeout_ms <= 0:
+            print("Error: timeout_ms must be a positive integer", file=sys.stderr)
             sys.exit(1)
 
     try:
