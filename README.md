@@ -35,6 +35,7 @@ MultiPing is an interactive, terminal-based ICMP monitor that pings many hosts i
 - The `ping_helper` binary built with `cap_net_raw` (Linux) to run without `sudo`.
 - Root/administrator privileges if you cannot use the helper (non-Linux platforms).
 - Network access for optional ASN lookups.
+- IPv4-only support (hosts must resolve to IPv4 addresses).
 
 ### Linux-Specific: Privileged ICMP Helper (Recommended)
 
@@ -88,6 +89,10 @@ Example (with a host list file and 2-second timeout):
 ```bash
 python main.py -t 2 -f hosts.txt
 ```
+Example (explicit IPv4 addresses only):
+```bash
+python main.py 1.1.1.1 8.8.8.8
+```
 
 ### Command-line Options
 - `-t`, `--timeout`: Timeout in seconds for each ping (default: 1).
@@ -124,6 +129,7 @@ python main.py -t 2 -f hosts.txt
 ## Notes
 - ICMP requires elevated privileges (run with `sudo` or Administrator on Windows).
 - ASN lookups use `whois.cymru.com`; blocked networks will show blank ASN values.
+- IPv6 is not supported; use IPv4 addresses or hostnames that resolve to IPv4.
 
 ## License
 Apache License 2.0. See [LICENSE](LICENSE).
