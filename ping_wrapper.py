@@ -35,8 +35,8 @@ def ping_with_helper(host, timeout_ms=1000, helper_path="./ping_helper"):
         helper_path: Path to the ping_helper binary (default: ./ping_helper)
 
     Returns:
-        float: RTT in milliseconds on success
-        None: On timeout or error
+        tuple[float | None, int | None]: (RTT in milliseconds, TTL) on success;
+        (None, None) on timeout or error
 
     Raises:
         FileNotFoundError: If the ping_helper binary is not found
@@ -61,24 +61,35 @@ def ping_with_helper(host, timeout_ms=1000, helper_path="./ping_helper"):
             # Parse the output: rtt_ms=<value>
             for line in result.stdout.splitlines():
                 if line.startswith("rtt_ms="):
-                    try:
-                        rtt_str = line.split("=", 1)[1]
-                        return float(rtt_str)
-                    except (ValueError, IndexError):
-                        return None
-            return None
+                    rtt_ms = None
+                    ttl = None
+                    for token in line.split():
+                        if token.startswith("rtt_ms="):
+                            rtt_str = token.split("=", 1)[1]
+                            try:
+                                rtt_ms = float(rtt_str)
+                            except ValueError:
+                                rtt_ms = None
+                        elif token.startswith("ttl="):
+                            ttl_str = token.split("=", 1)[1]
+                            try:
+                                ttl = int(ttl_str)
+                            except ValueError:
+                                ttl = None
+                    return (rtt_ms, ttl)
+            return (None, None)
 
         # Timeout case (exit code 7)
         if result.returncode == 7:
-            return None
+            return (None, None)
 
         # Other errors - return None
-        return None
+        return (None, None)
 
     except subprocess.TimeoutExpired:
-        return None
+        return (None, None)
     except Exception:
-        return None
+        return (None, None)
 
 
 def main():
@@ -89,8 +100,8 @@ def main():
         python3 ping_wrapper.py <host> [timeout_ms]
 
     Outputs JSON with the result:
-        {"host": "example.com", "rtt_ms": 12.345, "success": true}
-        {"host": "example.com", "rtt_ms": null, "success": false}
+        {"host": "example.com", "rtt_ms": 12.345, "ttl": 64, "success": true}
+        {"host": "example.com", "rtt_ms": null, "ttl": null, "success": false}
     """
     if len(sys.argv) < 2:
         print("Usage: python3 ping_wrapper.py <host> [timeout_ms]", file=sys.stderr)
@@ -106,11 +117,12 @@ def main():
             sys.exit(1)
 
     try:
-        rtt_ms = ping_with_helper(host, timeout_ms)
+        rtt_ms, ttl = ping_with_helper(host, timeout_ms)
         result = {
             "host": host,
             "rtt_ms": rtt_ms,
-            "success": rtt_ms is not None
+            "ttl": ttl,
+            "success": rtt_ms is not None,
         }
         print(json.dumps(result))
         sys.exit(0 if rtt_ms is not None else 1)
@@ -118,6 +130,7 @@ def main():
         print(json.dumps({
             "host": host,
             "rtt_ms": None,
+            "ttl": None,
             "success": False,
             "error": str(e)
         }))
@@ -126,6 +139,7 @@ def main():
         print(json.dumps({
             "host": host,
             "rtt_ms": None,
+            "ttl": None,
             "success": False,
             "error": str(e)
         }))

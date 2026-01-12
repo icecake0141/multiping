@@ -124,6 +124,7 @@ int main(int argc, char *argv[]) {
     unsigned short expected_id = getpid() & 0xFFFF;
     unsigned short expected_seq = 1;
     uint32_t expected_addr = dest_addr->sin_addr.s_addr;
+    int reply_ttl = -1;
 
     /* Loop until we receive a matching reply or timeout */
     while (1) {
@@ -232,6 +233,7 @@ int main(int argc, char *argv[]) {
 
         /* This is our matching reply! Record end time and break */
         gettimeofday(&end_time, NULL);
+        reply_ttl = ip_hdr->ip_ttl;
         break;
     }
 
@@ -240,7 +242,7 @@ int main(int argc, char *argv[]) {
                     (end_time.tv_usec - start_time.tv_usec) / 1000.0;
 
     /* Output result */
-    printf("rtt_ms=%.3f\n", rtt_ms);
+    printf("rtt_ms=%.3f ttl=%d\n", rtt_ms, reply_ttl);
 
     close(sockfd);
     freeaddrinfo(res);
