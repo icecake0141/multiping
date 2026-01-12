@@ -19,7 +19,7 @@ MultiPing is an interactive, terminal-based ICMP monitor that pings many hosts i
 > 日本語版 README: [README.ja.md](README.ja.md)
 
 ## Features
-- Concurrent ICMP ping to multiple hosts (Scapy-based).
+- Concurrent ICMP ping to multiple hosts (capability-based helper binary).
 - Live timeline or sparkline visualization with success/slow/fail markers.
 - Summary panel with host statistics, aggregate counts, and TTL display.
 - Sort and filter results by failures, streaks, latency, or host name.
@@ -32,13 +32,13 @@ MultiPing is an interactive, terminal-based ICMP monitor that pings many hosts i
 
 ## Requirements
 - Python 3.9 or newer.
-- `scapy` (see `requirements.txt`).
-- Root/administrator privileges to send ICMP packets.
+- The `ping_helper` binary built with `cap_net_raw` (Linux) to run without `sudo`.
+- Root/administrator privileges if you cannot use the helper (non-Linux platforms).
 - Network access for optional ASN lookups.
 
-### Linux-Specific: Privileged ICMP Helper (Optional)
+### Linux-Specific: Privileged ICMP Helper (Recommended)
 
-On Linux, you can use the included `ping_helper` binary with capability-based privileges instead of running Python as root. This is more secure as it limits raw socket access to a single small binary.
+On Linux, use the included `ping_helper` binary with capability-based privileges instead of running Python as root. This is more secure as it limits raw socket access to a single small binary.
 
 **Dependencies:**
 - `gcc` (for building the helper)
@@ -71,7 +71,7 @@ git clone https://github.com/icecake0141/multiping.git
 cd multiping
 python -m pip install -r requirements.txt
 
-# Optional: Build the privileged ICMP helper (Linux only)
+# Build the privileged ICMP helper (Linux only)
 make build
 sudo make setcap
 ```
@@ -102,6 +102,7 @@ python main.py -t 2 -f hosts.txt
 - `--snapshot-timezone`: Timezone for snapshot filenames (`utc|display`).
 - `--flash-on-fail`: Flash screen (invert colors) when a ping fails to draw attention.
 - `--bell-on-fail`: Ring terminal bell when a ping fails to draw attention.
+- `--ping-helper`: Path to the `ping_helper` binary (default: `./ping_helper`).
 
 ### Interactive Controls
 - `n`: Cycle display name mode (ip/rdns/alias).

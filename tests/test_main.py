@@ -147,32 +147,11 @@ class TestReadInputFile(unittest.TestCase):
 class TestPingHost(unittest.TestCase):
     """Test ping host functionality"""
 
-    @staticmethod
-    def _create_mock_received_packet_with_ttl(ttl=64):
-        """Helper method to create a mock received packet with TTL"""
-        mock_received = MagicMock()
-        mock_received.time = 0.001
-        # Mock IP layer with TTL
-        mock_ip_layer = MagicMock()
-        mock_ip_layer.ttl = ttl
-        mock_received.__getitem__ = MagicMock(return_value=mock_ip_layer)
-        mock_received.__contains__ = MagicMock(return_value=True)
-        return mock_received
-
-    @patch("main.ICMP")
-    @patch("main.IP")
-    @patch("main.sr")
-    def test_ping_host_success(self, mock_sr, mock_ip, mock_icmp):
+    @patch("main.os.path.exists", return_value=True)
+    @patch("main.ping_with_helper")
+    def test_ping_host_success(self, mock_ping_with_helper, mock_path_exists):
         """Test successful ping"""
-        # Mock IP and ICMP packet creation
-        mock_packet = MagicMock()
-        mock_ip.return_value.__truediv__ = MagicMock(return_value=mock_packet)
-
-        # Mock successful ping response - ans should be a truthy list
-        mock_sent = MagicMock()
-        mock_sent.time = 0.0
-        mock_received = self._create_mock_received_packet_with_ttl(ttl=64)
-        mock_sr.return_value = ([[mock_sent, mock_received]], [])
+        mock_ping_with_helper.return_value = (25.0, 64)
 
         results = list(ping_host("example.com", 1, 4, 0.5, False))
 
@@ -182,17 +161,11 @@ class TestPingHost(unittest.TestCase):
             self.assertIn(result["status"], ["success", "slow"])
             self.assertEqual(result["ttl"], 64)
 
-    @patch("main.ICMP")
-    @patch("main.IP")
-    @patch("main.sr")
-    def test_ping_host_failure(self, mock_sr, mock_ip, mock_icmp):
+    @patch("main.os.path.exists", return_value=True)
+    @patch("main.ping_with_helper")
+    def test_ping_host_failure(self, mock_ping_with_helper, mock_path_exists):
         """Test failed ping"""
-        # Mock IP and ICMP packet creation
-        mock_packet = MagicMock()
-        mock_ip.return_value.__truediv__ = MagicMock(return_value=mock_packet)
-
-        # Mock failed ping response (no answers)
-        mock_sr.return_value = ([], [MagicMock()])
+        mock_ping_with_helper.return_value = (None, None)
 
         results = list(ping_host("example.com", 1, 4, 0.5, False))
 
@@ -202,24 +175,16 @@ class TestPingHost(unittest.TestCase):
             self.assertEqual(result["status"], "fail")
             self.assertIsNone(result["ttl"])
 
-    @patch("main.ICMP")
-    @patch("main.IP")
-    @patch("main.sr")
-    def test_ping_host_partial_success(self, mock_sr, mock_ip, mock_icmp):
+    @patch("main.os.path.exists", return_value=True)
+    @patch("main.ping_with_helper")
+    def test_ping_host_partial_success(self, mock_ping_with_helper, mock_path_exists):
         """Test partial ping success"""
-        # Mock IP and ICMP packet creation
-        mock_packet = MagicMock()
-        mock_ip.return_value.__truediv__ = MagicMock(return_value=mock_packet)
-
         # Mock alternating success/failure
-        mock_sent = MagicMock()
-        mock_sent.time = 0.0
-        mock_received = self._create_mock_received_packet_with_ttl(ttl=64)
-        mock_sr.side_effect = [
-            ([[mock_sent, mock_received]], []),
-            ([], [MagicMock()]),
-            ([[mock_sent, mock_received]], []),
-            ([], [MagicMock()]),
+        mock_ping_with_helper.side_effect = [
+            (25.0, 64),
+            (None, None),
+            (25.0, 64),
+            (None, None),
         ]
 
         results = list(ping_host("example.com", 1, 4, 0.5, False))
@@ -236,16 +201,11 @@ class TestPingHost(unittest.TestCase):
             else:
                 self.assertIsNone(r["ttl"])
 
-    @patch("main.ICMP")
-    @patch("main.IP")
-    @patch("main.sr")
-    def test_ping_host_with_network_error(self, mock_sr, mock_ip, mock_icmp):
+    @patch("main.os.path.exists", return_value=True)
+    @patch("main.ping_with_helper")
+    def test_ping_host_with_network_error(self, mock_ping_with_helper, mock_path_exists):
         """Test ping with network error"""
-        # Mock IP and ICMP packet creation
-        mock_packet = MagicMock()
-        mock_ip.return_value.__truediv__ = MagicMock(return_value=mock_packet)
-
-        mock_sr.side_effect = OSError("Network unreachable")
+        mock_ping_with_helper.side_effect = OSError("Network unreachable")
 
         results = list(ping_host("example.com", 1, 2, 0.5, False))
 
@@ -302,6 +262,7 @@ class TestMain(unittest.TestCase):
             pause_mode="display",
             timezone=None,
             snapshot_timezone="utc",
+            ping_helper="./ping_helper",
         )
 
         # Mock executor
@@ -333,6 +294,7 @@ class TestMain(unittest.TestCase):
             pause_mode="display",
             timezone=None,
             snapshot_timezone="utc",
+            ping_helper="./ping_helper",
         )
 
         main(args)
@@ -351,6 +313,7 @@ class TestMain(unittest.TestCase):
             pause_mode="display",
             timezone=None,
             snapshot_timezone="utc",
+            ping_helper="./ping_helper",
         )
 
         main(args)
@@ -408,6 +371,7 @@ class TestMain(unittest.TestCase):
             pause_mode="display",
             timezone=None,
             snapshot_timezone="utc",
+            ping_helper="./ping_helper",
         )
 
         # Mock executor
@@ -441,6 +405,7 @@ class TestMain(unittest.TestCase):
             pause_mode="display",
             timezone=None,
             snapshot_timezone="utc",
+            ping_helper="./ping_helper",
         )
 
         main(args)
@@ -921,6 +886,7 @@ class TestQuitHotkey(unittest.TestCase):
             snapshot_timezone="utc",
             flash_on_fail=False,
             bell_on_fail=False,
+            ping_helper="./ping_helper",
         )
 
         # Mock executor
@@ -987,6 +953,7 @@ class TestQuitHotkey(unittest.TestCase):
             snapshot_timezone="utc",
             flash_on_fail=False,
             bell_on_fail=False,
+            ping_helper="./ping_helper",
         )
 
         # Mock executor
@@ -1053,6 +1020,7 @@ class TestQuitHotkey(unittest.TestCase):
             snapshot_timezone="utc",
             flash_on_fail=False,
             bell_on_fail=False,
+            ping_helper="./ping_helper",
         )
 
         # Mock executor

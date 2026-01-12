@@ -27,7 +27,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from scapy.all import ICMP, IP, sr  # type: ignore[attr-defined]
+from ping_wrapper import ping_with_helper
 
 
 # Constants for time navigation feature
@@ -164,6 +164,12 @@ def handle_options():
         help="Ring terminal bell when ping fails",
     )
     parser.add_argument(
+        "--ping-helper",
+        type=str,
+        default="./ping_helper",
+        help="Path to ping_helper binary (default: ./ping_helper)",
+    )
+    parser.add_argument(
         "hosts", nargs="*", help="Hosts to ping (IP addresses or hostnames)"
     )
 
@@ -199,7 +205,16 @@ def read_input_file(input_file):
 # Ping a single host
 
 
-def ping_host(host, timeout, count, slow_threshold, verbose, pause_event=None, interval=1.0):
+def ping_host(
+    host,
+    timeout,
+    count,
+    slow_threshold,
+    verbose,
+    pause_event=None,
+    interval=1.0,
+    helper_path="./ping_helper",
+):
     """
     Ping a single host with the specified parameters.
 
@@ -210,12 +225,29 @@ def ping_host(host, timeout, count, slow_threshold, verbose, pause_event=None, i
         verbose: Whether to show detailed output
         pause_event: Event to pause pinging
         interval: Interval in seconds between pings
+        helper_path: Path to ping_helper binary
 
     Yields:
         A dict with host, sequence, status, and rtt
     """
     if verbose:
         print(f"\n--- Pinging {host} ---")
+
+    if not os.path.exists(helper_path):
+        message = (
+            f"ping_helper binary not found at {helper_path}. "
+            "Please run 'make build' and 'sudo make setcap'."
+        )
+        if verbose:
+            print(message)
+        yield {
+            "host": host,
+            "sequence": 1,
+            "status": "fail",
+            "rtt": None,
+            "ttl": None,
+        }
+        return
 
     i = 0
     while True:
@@ -227,38 +259,41 @@ def ping_host(host, timeout, count, slow_threshold, verbose, pause_event=None, i
             while pause_event.is_set():
                 time.sleep(0.05)
         try:
-            # Create ICMP packet
-            icmp = IP(dst=host) / ICMP()
-
-            # Send ICMP packet
-            ans, unans = sr(icmp, timeout=timeout, verbose=0)
-
-            if ans:
-                sent, received = ans[0]
-                rtt = received.time - sent.time
+            rtt_ms, ttl = ping_with_helper(
+                host, timeout_ms=int(timeout * 1000), helper_path=helper_path
+            )
+            if rtt_ms is not None:
+                rtt = rtt_ms / 1000.0
                 status = "slow" if rtt >= slow_threshold else "success"
-                # Extract TTL from the IP layer of the received packet
-                try:
-                    ttl = received[IP].ttl
-                except (KeyError, AttributeError):
-                    ttl = None
                 if verbose:
                     print(f"Reply from {host}: seq={i+1} rtt={rtt:.3f}s ttl={ttl}")
-                    for r in ans:
-                        r[1].show()
-                yield {"host": host, "sequence": i + 1, "status": status, "rtt": rtt, "ttl": ttl}
+                yield {
+                    "host": host,
+                    "sequence": i + 1,
+                    "status": status,
+                    "rtt": rtt,
+                    "ttl": ttl,
+                }
             else:
                 if verbose:
                     print(f"No reply from {host}: seq={i+1}")
-                yield {"host": host, "sequence": i + 1, "status": "fail", "rtt": None, "ttl": None}
-        except OSError as e:
-            if verbose:
-                print(f"Network error pinging {host}: {e}")
-            yield {"host": host, "sequence": i + 1, "status": "fail", "rtt": None, "ttl": None}
+                yield {
+                    "host": host,
+                    "sequence": i + 1,
+                    "status": "fail",
+                    "rtt": None,
+                    "ttl": None,
+                }
         except Exception as e:
             if verbose:
                 print(f"Error pinging {host}: {e}")
-            yield {"host": host, "sequence": i + 1, "status": "fail", "rtt": None, "ttl": None}
+            yield {
+                "host": host,
+                "sequence": i + 1,
+                "status": "fail",
+                "rtt": None,
+                "ttl": None,
+            }
 
         i += 1
 
@@ -813,7 +848,15 @@ def format_timestamp(now_utc, display_tz):
 
 
 def worker_ping(
-    host_info, timeout, count, slow_threshold, verbose, pause_event, result_queue, interval
+    host_info,
+    timeout,
+    count,
+    slow_threshold,
+    verbose,
+    pause_event,
+    result_queue,
+    interval,
+    helper_path,
 ):
     for result in ping_host(
         host_info["host"],
@@ -823,6 +866,7 @@ def worker_ping(
         verbose,
         pause_event,
         interval,
+        helper_path,
     ):
         result_queue.put({**result, "host_id": host_info["id"]})
     result_queue.put({"host_id": host_info["id"], "status": "done"})
@@ -1219,6 +1263,7 @@ def main(args):
                 pause_event,
                 result_queue,
                 args.interval,
+                args.ping_helper,
             )
 
         completed_hosts = 0
