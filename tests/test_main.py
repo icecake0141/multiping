@@ -50,6 +50,7 @@ from main import (
     ring_bell,
     read_key,
     create_state_snapshot,
+    update_history_buffer,
     latest_ttl_value,
     toggle_panel_visibility,
     compute_history_page_step,
@@ -1480,6 +1481,92 @@ class TestArrowKeyNavigation(unittest.TestCase):
         self.assertEqual(list(snapshot["buffers"][0]["timeline"]), [".", ".", "x"])
         self.assertEqual(list(snapshot["buffers"][0]["ttl_history"]), [64, 64, None])
         self.assertEqual(snapshot["stats"][0]["success"], 2)
+
+    def test_update_history_buffer_advances_offset(self):
+        """Test history offset shifts forward when new snapshots are added."""
+        buffers = {
+            0: {
+                "timeline": deque(["."] * 2, maxlen=10),
+                "rtt_history": deque([0.01, 0.02], maxlen=10),
+                "ttl_history": deque([64, 64], maxlen=10),
+                "categories": {
+                    "success": deque([1, 2], maxlen=10),
+                    "slow": deque([], maxlen=10),
+                    "fail": deque([], maxlen=10),
+                },
+            }
+        }
+        stats = {
+            0: {
+                "success": 2,
+                "slow": 0,
+                "fail": 0,
+                "total": 2,
+                "rtt_sum": 0.03,
+                "rtt_count": 2,
+            }
+        }
+        history_buffer = deque(
+            [
+                create_state_snapshot(buffers, stats, 1.0),
+                create_state_snapshot(buffers, stats, 2.0),
+            ],
+            maxlen=5,
+        )
+        last_snapshot_time = 0.0
+        history_offset = 1
+
+        last_snapshot_time, history_offset = update_history_buffer(
+            history_buffer,
+            buffers,
+            stats,
+            now=3.0,
+            last_snapshot_time=last_snapshot_time,
+            history_offset=history_offset,
+        )
+
+        self.assertEqual(last_snapshot_time, 3.0)
+        self.assertEqual(history_offset, 2)
+
+    def test_update_history_buffer_keeps_live_offset(self):
+        """Test history offset stays at zero for live view."""
+        buffers = {
+            0: {
+                "timeline": deque(["."] * 2, maxlen=10),
+                "rtt_history": deque([0.01, 0.02], maxlen=10),
+                "ttl_history": deque([64, 64], maxlen=10),
+                "categories": {
+                    "success": deque([1, 2], maxlen=10),
+                    "slow": deque([], maxlen=10),
+                    "fail": deque([], maxlen=10),
+                },
+            }
+        }
+        stats = {
+            0: {
+                "success": 2,
+                "slow": 0,
+                "fail": 0,
+                "total": 2,
+                "rtt_sum": 0.03,
+                "rtt_count": 2,
+            }
+        }
+        history_buffer = deque(maxlen=5)
+        last_snapshot_time = 0.0
+        history_offset = 0
+
+        last_snapshot_time, history_offset = update_history_buffer(
+            history_buffer,
+            buffers,
+            stats,
+            now=1.0,
+            last_snapshot_time=last_snapshot_time,
+            history_offset=history_offset,
+        )
+
+        self.assertEqual(last_snapshot_time, 1.0)
+        self.assertEqual(history_offset, 0)
 
     def test_help_view_includes_arrow_keys(self):
         """Test that help view includes arrow key documentation"""

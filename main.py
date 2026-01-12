@@ -1401,6 +1401,25 @@ def create_state_snapshot(buffers, stats, timestamp):
     }
 
 
+def update_history_buffer(
+    history_buffer,
+    buffers,
+    stats,
+    now,
+    last_snapshot_time,
+    history_offset,
+):
+    if (now - last_snapshot_time) < SNAPSHOT_INTERVAL_SECONDS:
+        return last_snapshot_time, history_offset
+
+    snapshot = create_state_snapshot(buffers, stats, now)
+    history_buffer.append(snapshot)
+    last_snapshot_time = now
+    if history_offset > 0:
+        history_offset = min(history_offset + 1, len(history_buffer) - 1)
+    return last_snapshot_time, history_offset
+
+
 def main(args):
 
     # Validate count parameter - allow 0 for infinite
@@ -1801,11 +1820,14 @@ def main(args):
                 now = time.time()
 
                 # Periodically save snapshots for history navigation
-                if (history_offset == 0 and
-                        (now - last_snapshot_time) >= SNAPSHOT_INTERVAL_SECONDS):
-                    snapshot = create_state_snapshot(buffers, stats, now)
-                    history_buffer.append(snapshot)
-                    last_snapshot_time = now
+                last_snapshot_time, history_offset = update_history_buffer(
+                    history_buffer,
+                    buffers,
+                    stats,
+                    now,
+                    last_snapshot_time,
+                    history_offset,
+                )
 
                 # Determine which buffers/stats to use for rendering
                 render_buffers = buffers
