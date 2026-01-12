@@ -946,15 +946,27 @@ def resolve_rdns(ip_address):
         return None
 
 
-def resolve_asn(ip_address, timeout=3.0):
+def resolve_asn(ip_address, timeout=3.0, max_bytes=65536):
     query = f" -v {ip_address}\n".encode("utf-8")
     try:
         with socket.create_connection(("whois.cymru.com", 43), timeout=timeout) as sock:
+            sock.settimeout(timeout)
             sock.sendall(query)
-            response = sock.recv(4096).decode("utf-8", errors="ignore")
+            chunks = []
+            total_read = 0
+            while True:
+                remaining = max_bytes - total_read
+                if remaining <= 0:
+                    break
+                chunk = sock.recv(min(4096, remaining))
+                if not chunk:
+                    break
+                chunks.append(chunk)
+                total_read += len(chunk)
     except (socket.timeout, OSError):
         return None
 
+    response = b"".join(chunks).decode("utf-8", errors="ignore")
     lines = [line for line in response.splitlines() if line.strip()]
     if len(lines) < 2:
         return None
