@@ -54,12 +54,27 @@ int main(int argc, char *argv[]) {
     }
 
     const char *host = argv[1];
-    int timeout_ms = atoi(argv[2]);
-    
-    if (timeout_ms <= 0) {
+    const char *timeout_arg = argv[2];
+    char *endptr = NULL;
+    errno = 0;
+    long timeout_value = strtol(timeout_arg, &endptr, 10);
+    if (endptr == timeout_arg || *endptr != '\0') {
+        fprintf(stderr, "Error: timeout_ms must be an integer value\n");
+        return 2;
+    }
+    if (errno == ERANGE) {
+        fprintf(stderr, "Error: timeout_ms is out of range\n");
+        return 2;
+    }
+    if (timeout_value <= 0) {
         fprintf(stderr, "Error: timeout_ms must be positive\n");
         return 2;
     }
+    if (timeout_value > 60000) {
+        fprintf(stderr, "Error: timeout_ms must be 60000ms or less\n");
+        return 2;
+    }
+    int timeout_ms = (int)timeout_value;
 
     /* Resolve hostname */
     struct addrinfo hints, *res;
