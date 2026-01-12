@@ -690,6 +690,15 @@ def build_status_line(sort_mode, filter_mode, paused, status_message=None):
     return status
 
 
+def toggle_panel_visibility(
+    current_position, last_visible_position, default_position="right"
+):
+    if current_position == "none":
+        restored_position = last_visible_position or default_position
+        return restored_position, restored_position
+    return "none", current_position
+
+
 def render_help_view(width, height):
     lines = [
         "MultiPing - Help",
@@ -700,6 +709,7 @@ def render_help_view(width, height):
         "  o : cycle sort (failures/streak/latency/host)",
         "  f : cycle filter (failures/latency/all)",
         "  a : toggle ASN display",
+        "  w : toggle summary panel on/off",
         "  p : pause/resume display",
         "  s : save snapshot to file",
         "  <- / -> : navigate backward/forward in time (1 page)",
@@ -1231,6 +1241,9 @@ def main(args):
     asn_cache = {}
     asn_timeout = 3.0
     asn_failure_ttl = 300.0
+    panel_position = args.panel_position
+    panel_toggle_default = args.panel_position if args.panel_position != "none" else "right"
+    last_panel_position = panel_position if panel_position != "none" else None
 
     # History navigation state
     # Store snapshots at regular intervals for time navigation
@@ -1337,6 +1350,19 @@ def main(args):
                     elif key == "a":
                         show_asn = not show_asn
                         updated = True
+                    elif key == "w":
+                        panel_position, last_panel_position = toggle_panel_visibility(
+                            panel_position,
+                            last_panel_position,
+                            default_position=panel_toggle_default,
+                        )
+                        status_message = (
+                            "Summary panel hidden"
+                            if panel_position == "none"
+                            else "Summary panel shown"
+                        )
+                        force_render = True
+                        updated = True
                     elif key == "p":
                         paused = not paused
                         status_message = "Paused" if paused else "Resumed"
@@ -1358,7 +1384,7 @@ def main(args):
                             buffers,
                             stats,
                             symbols,
-                            args.panel_position,
+                            panel_position,
                             modes[mode_index],
                             display_modes[display_mode_index],
                             sort_modes[sort_mode_index],
@@ -1500,7 +1526,7 @@ def main(args):
                         render_buffers,
                         render_stats,
                         symbols,
-                        args.panel_position,
+                        panel_position,
                         modes[mode_index],
                         display_modes[display_mode_index],
                         sort_modes[sort_mode_index],
