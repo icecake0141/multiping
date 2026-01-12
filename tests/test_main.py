@@ -50,6 +50,7 @@ from main import (
     read_key,
     create_state_snapshot,
     latest_ttl_value,
+    toggle_panel_visibility,
 )  # noqa: E402
 
 
@@ -853,6 +854,26 @@ class TestStatusLine(unittest.TestCase):
         result = build_status_line("latency", "failures", False, None)
         self.assertIn("Latest Latency", result)
         self.assertIn("Failures Only", result)
+
+
+class TestPanelToggle(unittest.TestCase):
+    """Test summary panel toggle behavior"""
+
+    def test_toggle_hides_and_restores(self):
+        """Toggle hides panel and restores previous position."""
+        position, last_visible = toggle_panel_visibility("right", None)
+        self.assertEqual(position, "none")
+        self.assertEqual(last_visible, "right")
+
+        position, last_visible = toggle_panel_visibility(position, last_visible)
+        self.assertEqual(position, "right")
+        self.assertEqual(last_visible, "right")
+
+    def test_toggle_defaults_when_no_previous(self):
+        """Toggle restores to default when no previous position exists."""
+        position, last_visible = toggle_panel_visibility("none", None, "bottom")
+        self.assertEqual(position, "bottom")
+        self.assertEqual(last_visible, "bottom")
 
 
 class TestQuitHotkey(unittest.TestCase):
