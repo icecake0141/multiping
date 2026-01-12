@@ -36,34 +36,34 @@ MultiPing は、複数ホストへの ICMP ping を並列に実行し、タイ�
 - helper が使えない場合は ICMP を送信するための管理者権限。
 - ASN 取得用のネットワーク接続（任意機能）。
 
-## Linux: Privileged ICMP Helper（推奨）
+### Linux 専用: 特権 ICMP ヘルパー（任意）
 
-Linux では `ping_helper` バイナリに `cap_net_raw` を付与することで、Python を root で起動せずに ICMP を送信できます。
+Linux では、Python を root で実行する代わりに、ケーパビリティベースの特権を持つ `ping_helper` バイナリを使用できます。これにより、生のソケットアクセスを単一の小さなバイナリに限定できるため、より安全です。
 
-**依存パッケージ:**
-- `gcc`（ビルド用）
-- `libcap2-bin`（`setcap` 用）
+**依存関係:**
+- `gcc`（ヘルパーのビルド用）
+- `libcap2-bin`（`setcap` でケーパビリティを設定するため）
 
-Debian/Ubuntu でのインストール:
+Debian/Ubuntu での依存関係のインストール:
 ```bash
 sudo apt-get install gcc libcap2-bin
 ```
 
-**ビルドと設定:**
+**ヘルパーのビルドと設定:**
 ```bash
-# helper バイナリのビルド
+# ヘルパーバイナリをビルド
 make build
 
-# ケイパビリティ付与（sudo が必要）
+# ケーパビリティを設定（sudo が必要）
 sudo make setcap
 
-# helper の動作確認
+# ヘルパーをテスト
 python3 ping_wrapper.py google.com
 ```
 
-**macOS/BSD 向けの注意:** `setcap` は Linux 専用です。macOS/BSD では setuid を使う必要がありますが、セキュリティ上推奨されません。これらの環境では `sudo` で Python を実行する方が安全です。
+**macOS/BSD ユーザーへの注意:** `setcap` コマンドは Linux 専用であり、macOS や BSD システムでは利用できません。これらのプラットフォームでは、代わりに setuid ビットを使用する必要があります（例: `sudo chown root:wheel ping_helper && sudo chmod u+s ping_helper`）が、セキュリティ上の理由から推奨されません。これらのプラットフォームでは、メインの Python スクリプトを `sudo` で実行する方が良いでしょう。
 
-**Security Note:** `/usr/bin/python3` など汎用インタプリタに `cap_net_raw` を付与しないでください。必要最小限の `ping_helper` バイナリにだけ付与してください。
+**セキュリティ注意:** `/usr/bin/python3` や他の汎用インタプリタに `cap_net_raw` やその他のケーパビリティを付与しないでください。特定の `ping_helper` バイナリにのみ、必要最小限の特権を付与してください。
 
 ## インストール
 ```bash
@@ -71,7 +71,7 @@ git clone https://github.com/icecake0141/multiping.git
 cd multiping
 python -m pip install -r requirements.txt
 
-# Linux の場合は helper をビルド
+# 任意: 特権 ICMP ヘルパーをビルド（Linux のみ）
 make build
 sudo make setcap
 ```
