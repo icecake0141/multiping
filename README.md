@@ -125,7 +125,7 @@ python main.py 1.1.1.1 8.8.8.8
 - `W`: Cycle summary panel position (left/right/top/bottom).
 - `p`: Pause/resume (display only or ping + display).
 - `s`: Save a snapshot to `multiping_snapshot_YYYYMMDD_HHMMSS.txt`.
-- `←` / `→`: Navigate backward/forward in time (view monitoring history up to 30 minutes).
+- `←` / `→`: Navigate backward/forward in time by one page. History keeps recording while browsing; the view is frozen until you return to live.
 - `H`: Show help (press any key to close).
 - `q`: Quit.
 
