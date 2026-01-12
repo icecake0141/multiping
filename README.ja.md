@@ -19,7 +19,7 @@ MultiPing は、複数ホストへの ICMP ping を並列に実行し、タイ�
 > English README: [README.md](README.md)
 
 ## 特長
-- 複数ホストへの同時 ICMP ping（Scapy ベース）。
+- 複数ホストへの同時 ICMP ping（capability 付き helper バイナリ）。
 - 成功/遅延/失敗を可視化するタイムライン/スパークライン表示。
 - ホスト統計、合計値、TTL 表示を含むサマリーパネル。
 - 失敗回数・連続失敗・遅延・ホスト名でのソート/フィルタ。
@@ -32,8 +32,8 @@ MultiPing は、複数ホストへの ICMP ping を並列に実行し、タイ�
 
 ## 必要条件
 - Python 3.9 以上。
-- `scapy`（`requirements.txt` を参照）。
-- ICMP を送信するための管理者権限。
+- `ping_helper` バイナリを `cap_net_raw` 付きでビルド（Linux 環境で sudo 不要）。
+- helper が使えない場合は ICMP を送信するための管理者権限。
 - ASN 取得用のネットワーク接続（任意機能）。
 
 ### Linux 専用: 特権 ICMP ヘルパー（任意）
@@ -102,6 +102,7 @@ python main.py -t 2 -f hosts.txt
 - `--snapshot-timezone`: スナップショット時刻のタイムゾーン（`utc|display`）。
 - `--flash-on-fail`: ping に失敗したときに画面をフラッシュ（色反転）して注意を惹く。
 - `--bell-on-fail`: ping に失敗したときにターミナルベルを鳴らして注意を惹く。
+- `--ping-helper`: `ping_helper` バイナリのパス（デフォルト: `./ping_helper`）。
 
 ### 対話操作
 - `n`: 表示名モード切替（ip/rdns/alias）。
@@ -121,7 +122,7 @@ python main.py -t 2 -f hosts.txt
 - `x` 失敗/タイムアウト
 
 ## 補足
-- ICMP を送信するため、`sudo` など管理者権限で実行してください。
+- helper を使えない環境では ICMP を送信するため、`sudo` など管理者権限で実行してください。
 - ASN 取得は `whois.cymru.com` を使用します。アクセス不可の場合は空欄になります。
 
 ## ライセンス
