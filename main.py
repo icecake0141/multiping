@@ -1029,13 +1029,20 @@ def get_cached_page_step(
     Returns:
         tuple: (page_step, new_cached_page_step, new_last_term_size)
     """
+    def should_recalculate_page_step(cached_value, last_size, current_size):
+        """Check if page step needs recalculation due to cache miss or terminal resize"""
+        if cached_value is None or last_size is None:
+            return True  # First time - need to calculate
+        if current_size.columns != last_size.columns:
+            return True  # Terminal width changed
+        if current_size.lines != last_size.lines:
+            return True  # Terminal height changed
+        return False
+    
     current_term_size = get_terminal_size(fallback=(80, 24))
     
     # Check if we need to recalculate
-    if (cached_page_step is None or 
-        last_term_size is None or
-        current_term_size.columns != last_term_size.columns or
-        current_term_size.lines != last_term_size.lines):
+    if should_recalculate_page_step(cached_page_step, last_term_size, current_term_size):
         # Terminal size changed or first time - recalculate
         page_step = compute_history_page_step(
             host_infos,

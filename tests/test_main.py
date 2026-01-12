@@ -1819,7 +1819,8 @@ class TestArrowKeyNavigation(unittest.TestCase):
         # Should return same value without recalculating
         self.assertEqual(page_step1, page_step2)
         self.assertEqual(page_step1, cached2)
-        # Should have called get_terminal_size only once more (in get_cached_page_step, not in compute_history_page_step)
+        # Should have called get_terminal_size only once more to check size,
+        # but not called compute_history_page_step again (which would call it internally)
         self.assertEqual(mock_terminal_size.call_count, first_call_count + 1)
 
     @patch("main.get_terminal_size")
