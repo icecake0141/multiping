@@ -1886,6 +1886,67 @@ class TestArrowKeyNavigation(unittest.TestCase):
         self.assertEqual(term_size2.columns, 120)
         self.assertEqual(term_size2.lines, 40)
 
+    @patch("main.get_terminal_size")
+    @patch("main.compute_history_page_step")
+    def test_rapid_arrow_keys_use_cache(self, mock_compute, mock_term_size):
+        """Test that rapid arrow key presses use cached value, not recalculate each time"""
+        mock_term_size.return_value = os.terminal_size((80, 24))
+        mock_compute.return_value = 50  # Mock page step
+        
+        host_infos = [
+            {
+                "id": 0,
+                "alias": "host1",
+                "host": "host1",
+                "ip": "192.0.2.1",
+                "rdns": None,
+                "rdns_pending": False,
+                "asn": None,
+                "asn_pending": False,
+            }
+        ]
+        buffers = {
+            0: {
+                "timeline": deque(["."] * 3, maxlen=10),
+                "rtt_history": deque([0.01, 0.02, 0.03], maxlen=10),
+                "ttl_history": deque([64, 64, 64], maxlen=10),
+                "categories": {
+                    "success": deque([1], maxlen=10),
+                    "slow": deque([], maxlen=10),
+                    "fail": deque([], maxlen=10),
+                },
+            }
+        }
+        stats = {
+            0: {
+                "success": 3,
+                "slow": 0,
+                "fail": 0,
+                "total": 3,
+                "rtt_sum": 0.06,
+                "rtt_count": 3,
+            }
+        }
+        symbols = {"success": ".", "slow": "~", "fail": "x"}
+        
+        from main import get_cached_page_step
+        
+        # Simulate 10 rapid arrow key presses
+        cached_page_step = None
+        last_term_size = None
+        
+        for _ in range(10):
+            page_step, cached_page_step, last_term_size = get_cached_page_step(
+                cached_page_step, last_term_size,
+                host_infos, buffers, stats, symbols,
+                "none", "alias", "host", "all", 0.5, False
+            )
+            self.assertEqual(page_step, 50)
+        
+        # compute_history_page_step should only be called once (on first key press)
+        # All subsequent calls should use the cache
+        self.assertEqual(mock_compute.call_count, 1)
+
 
 class TestTTLFunctionality(unittest.TestCase):
     """Test TTL capture and display functionality"""
