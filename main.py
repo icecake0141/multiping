@@ -1121,6 +1121,9 @@ def main(args):
     if args.count < 0:
         print("Error: Count must be a non-negative number (0 for infinite).")
         return
+    if args.timeout <= 0:
+        print("Error: Timeout must be a positive number of seconds.")
+        return
 
     # Validate interval parameter
     if args.interval < 0.1 or args.interval > 60.0:

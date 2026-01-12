@@ -301,6 +301,27 @@ class TestMain(unittest.TestCase):
         mock_print.assert_called()
 
     @patch("builtins.print")
+    def test_main_with_invalid_timeout(self, mock_print):
+        """Test main function with invalid timeout"""
+        args = argparse.Namespace(
+            timeout=0,
+            count=4,
+            interval=1.0,
+            verbose=False,
+            hosts=["host1.com"],
+            input=None,
+            pause_mode="display",
+            timezone=None,
+            snapshot_timezone="utc",
+            ping_helper="./ping_helper",
+        )
+
+        main(args)
+        mock_print.assert_called()
+        call_args = [str(call) for call in mock_print.call_args_list]
+        self.assertTrue(any("Timeout" in str(call) for call in call_args))
+
+    @patch("builtins.print")
     def test_main_with_no_hosts(self, mock_print):
         """Test main function with no hosts"""
         args = argparse.Namespace(
