@@ -127,6 +127,7 @@ python main.py 1.1.1.1 8.8.8.8
 - `p`: Pause/resume (display only or ping + display).
 - `s`: Save a snapshot to `multiping_snapshot_YYYYMMDD_HHMMSS.txt`.
 - `←` / `→`: Navigate backward/forward in time by one page. History keeps recording while browsing; the view is frozen until you return to live.
+- `↑` / `↓`: Scroll the host list when it exceeds the terminal height.
 - `H`: Show help (press any key to close).
 - `q`: Quit.
 
