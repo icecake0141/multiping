@@ -732,6 +732,7 @@ def render_timeline_view(
     height,
     header,
     use_color=False,
+    scroll_offset=0,
     header_lines=2,
 ):
     if width <= 0 or height <= 0:
@@ -741,7 +742,11 @@ def render_timeline_view(
     width, label_width, timeline_width, visible_hosts = compute_main_layout(
         host_labels, width, height, header_lines
     )
-    truncated_entries = display_entries[:visible_hosts]
+    max_offset = max(0, len(display_entries) - visible_hosts)
+    scroll_offset = min(max(scroll_offset, 0), max_offset)
+    truncated_entries = display_entries[
+        scroll_offset : scroll_offset + visible_hosts
+    ]
 
     resize_buffers(buffers, timeline_width, symbols)
 
@@ -771,6 +776,7 @@ def render_sparkline_view(
     height,
     header,
     use_color=False,
+    scroll_offset=0,
     header_lines=2,
 ):
     if width <= 0 or height <= 0:
@@ -780,7 +786,11 @@ def render_sparkline_view(
     width, label_width, timeline_width, visible_hosts = compute_main_layout(
         host_labels, width, height, header_lines
     )
-    truncated_entries = display_entries[:visible_hosts]
+    max_offset = max(0, len(display_entries) - visible_hosts)
+    scroll_offset = min(max(scroll_offset, 0), max_offset)
+    truncated_entries = display_entries[
+        scroll_offset : scroll_offset + visible_hosts
+    ]
 
     resize_buffers(buffers, timeline_width, symbols)
 
@@ -818,6 +828,7 @@ def render_main_view(
     timestamp,
     activity_indicator="",
     use_color=False,
+    scroll_offset=0,
     header_lines=2,
 ):
     pause_label = "PAUSED" if paused else "LIVE"
@@ -835,6 +846,7 @@ def render_main_view(
             height,
             header,
             use_color,
+            scroll_offset,
             header_lines,
         )
     return render_timeline_view(
@@ -845,6 +857,7 @@ def render_main_view(
         height,
         header,
         use_color,
+        scroll_offset,
         header_lines,
     )
 
@@ -992,6 +1005,7 @@ def render_help_view(width, height):
         "  p : pause/resume display",
         "  s : save snapshot to file",
         "  <- / -> : navigate backward/forward in time (1 page)",
+        "  up / down : scroll host list",
         "  H : show help (press any key to close)",
         "  q : quit",
         "",
@@ -1044,6 +1058,52 @@ def compute_history_page_step(
     return max(1, timeline_width)
 
 
+def compute_host_scroll_bounds(
+    host_infos,
+    buffers,
+    stats,
+    symbols,
+    panel_position,
+    mode_label,
+    sort_mode,
+    filter_mode,
+    slow_threshold,
+    show_asn,
+    asn_width=8,
+    header_lines=2,
+):
+    term_size = get_terminal_size(fallback=(80, 24))
+    term_width = term_size.columns
+    term_height = term_size.lines
+
+    include_asn = should_show_asn(
+        host_infos, mode_label, show_asn, term_width, asn_width=asn_width
+    )
+    display_names = build_display_names(host_infos, mode_label, include_asn, asn_width)
+    main_width, main_height, _, _, _ = compute_panel_sizes(
+        term_width, term_height, panel_position
+    )
+    display_entries = build_display_entries(
+        host_infos,
+        display_names,
+        buffers,
+        stats,
+        symbols,
+        sort_mode,
+        filter_mode,
+        slow_threshold,
+    )
+    host_labels = [entry[1] for entry in display_entries]
+    if not host_labels:
+        host_labels = [info["alias"] for info in host_infos]
+    _, _, _, visible_hosts = compute_main_layout(
+        host_labels, main_width, main_height, header_lines
+    )
+    total_hosts = len(display_entries)
+    max_offset = max(0, total_hosts - visible_hosts)
+    return max_offset, visible_hosts, total_hosts
+
+
 def build_display_lines(
     host_infos,
     buffers,
@@ -1063,6 +1123,7 @@ def build_display_lines(
     timestamp,
     activity_indicator="",
     use_color=False,
+    host_scroll_offset=0,
     asn_width=8,
     header_lines=2,
 ):
@@ -1120,6 +1181,7 @@ def build_display_lines(
         timestamp,
         activity_indicator,
         use_color,
+        host_scroll_offset,
         header_lines,
     )
     summary_all = resolved_position in ("top", "bottom") and can_render_full_summary(
@@ -1182,6 +1244,7 @@ def render_display(
     status_message,
     display_tz,
     use_color=False,
+    host_scroll_offset=0,
     asn_width=8,
     header_lines=2,
 ):
@@ -1210,6 +1273,7 @@ def render_display(
         timestamp,
         activity_indicator,
         use_color,
+        host_scroll_offset,
         asn_width,
         header_lines,
     )
@@ -1690,6 +1754,7 @@ def main(args):
     history_buffer = deque(maxlen=max_history_snapshots)
     history_offset = 0  # 0 = live, >0 = viewing history
     last_snapshot_time = 0.0
+    host_scroll_offset = 0
 
     rdns_request_queue = queue.Queue()
     rdns_result_queue = queue.Queue()
@@ -1858,6 +1923,7 @@ def main(args):
                             format_timestamp(now_utc, display_tz),
                             "",
                             False,
+                            host_scroll_offset,
                         )
                         with open(
                             snapshot_name, "w", encoding="utf-8"
@@ -1913,6 +1979,66 @@ def main(args):
                                 snapshot = history_buffer[-(history_offset + 1)]
                                 elapsed_seconds = int(time.time() - snapshot["timestamp"])
                                 status_message = f"Viewing {elapsed_seconds}s ago"
+                    elif key == "arrow_up":
+                        scroll_buffers = buffers
+                        scroll_stats = stats
+                        if history_offset > 0 and history_offset <= len(history_buffer):
+                            snapshot = history_buffer[-(history_offset + 1)]
+                            scroll_buffers = snapshot["buffers"]
+                            scroll_stats = snapshot["stats"]
+                        max_offset, visible_hosts, total_hosts = compute_host_scroll_bounds(
+                            host_infos,
+                            scroll_buffers,
+                            scroll_stats,
+                            symbols,
+                            panel_position,
+                            modes[mode_index],
+                            sort_modes[sort_mode_index],
+                            filter_modes[filter_mode_index],
+                            args.slow_threshold,
+                            show_asn,
+                        )
+                        if host_scroll_offset > 0 and total_hosts > 0:
+                            host_scroll_offset = max(0, host_scroll_offset - 1)
+                            end_index = min(
+                                host_scroll_offset + visible_hosts, total_hosts
+                            )
+                            status_message = (
+                                f"Hosts {host_scroll_offset + 1}-{end_index} "
+                                f"of {total_hosts}"
+                            )
+                            force_render = True
+                            updated = True
+                    elif key == "arrow_down":
+                        scroll_buffers = buffers
+                        scroll_stats = stats
+                        if history_offset > 0 and history_offset <= len(history_buffer):
+                            snapshot = history_buffer[-(history_offset + 1)]
+                            scroll_buffers = snapshot["buffers"]
+                            scroll_stats = snapshot["stats"]
+                        max_offset, visible_hosts, total_hosts = compute_host_scroll_bounds(
+                            host_infos,
+                            scroll_buffers,
+                            scroll_stats,
+                            symbols,
+                            panel_position,
+                            modes[mode_index],
+                            sort_modes[sort_mode_index],
+                            filter_modes[filter_mode_index],
+                            args.slow_threshold,
+                            show_asn,
+                        )
+                        if host_scroll_offset < max_offset and total_hosts > 0:
+                            host_scroll_offset = min(max_offset, host_scroll_offset + 1)
+                            end_index = min(
+                                host_scroll_offset + visible_hosts, total_hosts
+                            )
+                            status_message = (
+                                f"Hosts {host_scroll_offset + 1}-{end_index} "
+                                f"of {total_hosts}"
+                            )
+                            force_render = True
+                            updated = True
 
                 while True:
                     try:
@@ -2014,6 +2140,20 @@ def main(args):
                 if force_render or (
                     not paused and (updated or (now - last_render) >= refresh_interval)
                 ):
+                    max_offset, _visible_hosts, _total_hosts = compute_host_scroll_bounds(
+                        host_infos,
+                        render_buffers,
+                        render_stats,
+                        symbols,
+                        panel_position,
+                        modes[mode_index],
+                        sort_modes[sort_mode_index],
+                        filter_modes[filter_mode_index],
+                        args.slow_threshold,
+                        show_asn,
+                    )
+                    if host_scroll_offset > max_offset:
+                        host_scroll_offset = max_offset
                     render_display(
                         host_infos,
                         render_buffers,
@@ -2032,6 +2172,7 @@ def main(args):
                         status_message,
                         display_tz,
                         use_color,
+                        host_scroll_offset,
                     )
                     last_render = now
                     updated = False
