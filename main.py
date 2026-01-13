@@ -1023,6 +1023,7 @@ def render_help_view(width, height):
         "  up / down : scroll host list",
         "  H : show help (press any key to close)",
         "  q : quit",
+        "",
         "Press any key to close this help screen.",
     ]
     return pad_lines(lines, width, height)
