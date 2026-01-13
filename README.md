@@ -112,7 +112,7 @@ python main.py 1.1.1.1 8.8.8.8
 - `--snapshot-timezone`: Timezone for snapshot filenames (`utc|display`).
 - `--flash-on-fail`: Flash screen (invert colors) when a ping fails to draw attention.
 - `--bell-on-fail`: Ring terminal bell when a ping fails to draw attention.
-- `--color`: Enable colored output (blue=success, yellow=slow, red=fail).
+- `--color`: Enable colored output (white=success, yellow=slow, red=fail).
 - `--ping-helper`: Path to the `ping_helper` binary (default: `./ping_helper`).
 
 ### Interactive Controls
@@ -135,7 +135,7 @@ python main.py 1.1.1.1 8.8.8.8
 - `.` success
 - `!` slow (RTT >= `--slow-threshold`)
 - `x` failure/timeout
-- When `--color` is enabled: blue=success, yellow=slow, red=failure.
+- When `--color` is enabled: white=success, yellow=slow, red=failure.
 
 ## Notes
 - ICMP requires elevated privileges (run with `sudo` or Administrator on Windows).

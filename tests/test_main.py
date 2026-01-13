@@ -1074,7 +1074,7 @@ class TestColorOutput(unittest.TestCase):
         symbols = {"success": ".", "fail": "x", "slow": "!"}
         timeline = [".", "!", "x"]
         colored = build_colored_timeline(timeline, symbols, use_color=True)
-        self.assertIn("\x1b[34m", colored)
+        self.assertIn("\x1b[37m", colored)
         self.assertIn("\x1b[33m", colored)
         self.assertIn("\x1b[31m", colored)
         self.assertIn("\x1b[0m", colored)
@@ -1087,7 +1087,7 @@ class TestColorOutput(unittest.TestCase):
         colored = build_colored_sparkline(
             sparkline, status_symbols, symbols, use_color=True
         )
-        self.assertIn("\x1b[34m", colored)
+        self.assertIn("\x1b[37m", colored)
         self.assertIn("\x1b[33m", colored)
         self.assertIn("\x1b[31m", colored)
 

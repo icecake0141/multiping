@@ -107,7 +107,7 @@ python main.py -t 2 -f hosts.txt
 - `--snapshot-timezone`: スナップショット時刻のタイムゾーン（`utc|display`）。
 - `--flash-on-fail`: ping に失敗したときに画面をフラッシュ（色反転）して注意を惹く。
 - `--bell-on-fail`: ping に失敗したときにターミナルベルを鳴らして注意を惹く。
-- `--color`: カラー表示を有効化（成功=青、遅延=黄、失敗=赤）。
+- `--color`: カラー表示を有効化（成功=白、遅延=黄、失敗=赤）。
 - `--ping-helper`: `ping_helper` バイナリのパス（デフォルト: `./ping_helper`）。
 
 ### 対話操作
@@ -130,7 +130,7 @@ python main.py -t 2 -f hosts.txt
 - `.` 成功
 - `!` 遅延（RTT >= `--slow-threshold`）
 - `x` 失敗/タイムアウト
-- `--color` 有効時: 成功=青、遅延=黄、失敗=赤
+- `--color` 有効時: 成功=白、遅延=黄、失敗=赤
 
 ## 補足
 - helper を使えない環境では ICMP を送信するため、`sudo` など管理者権限で実行してください。

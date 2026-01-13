@@ -42,7 +42,7 @@ ACTIVITY_INDICATOR_SPEED_HZ = 4
 LAST_RENDER_LINES = None
 ANSI_RESET = "\x1b[0m"
 STATUS_COLORS = {
-    "success": "\x1b[34m",  # Blue
+    "success": "\x1b[37m",  # White
     "slow": "\x1b[33m",     # Yellow
     "fail": "\x1b[31m",     # Red
 }
