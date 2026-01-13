@@ -99,17 +99,17 @@ python main.py -t 2 -f hosts.txt
 - `-t`, `--timeout`: 1 回の ping のタイムアウト（秒、デフォルト: 1）。
 - `-c`, `--count`: 各ホストの試行回数（デフォルト: 0 で無限）。
 - `-i`, `--interval`: ホストごとの ping 間隔（秒、デフォルト: 1.0、範囲: 0.1-60.0）。
-- `--slow-threshold`: 遅延判定の閾値（秒、デフォルト: 0.5）。
+- `-s`, `--slow-threshold`: 遅延判定の閾値（秒、デフォルト: 0.5）。
 - `-v`, `--verbose`: 詳細ログ出力（UI なし）。
 - `-f`, `--input`: ホスト一覧ファイル（1 行 1 ホスト、`IP,alias` 形式、`#` はコメント）。
-- `--panel-position`: サマリーパネルの位置（`right|left|top|bottom|none`）。
-- `--pause-mode`: 一時停止の挙動（`display|ping`）。
-- `--timezone`: 表示時刻のタイムゾーン（IANA 名）。
-- `--snapshot-timezone`: スナップショット時刻のタイムゾーン（`utc|display`）。
-- `--flash-on-fail`: ping に失敗したときに画面をフラッシュ（背景を白く）して注意を惹く。
-- `--bell-on-fail`: ping に失敗したときにターミナルベルを鳴らして注意を惹く。
-- `--color`: カラー表示を有効化（成功=白、遅延=黄、失敗=赤）。
-- `--ping-helper`: `ping_helper` バイナリのパス（デフォルト: `./ping_helper`）。
+- `-P`, `--panel-position`: サマリーパネルの位置（`right|left|top|bottom|none`）。
+- `-m`, `--pause-mode`: 一時停止の挙動（`display|ping`）。
+- `-z`, `--timezone`: 表示時刻のタイムゾーン（IANA 名）。
+- `-Z`, `--snapshot-timezone`: スナップショット時刻のタイムゾーン（`utc|display`）。
+- `-F`, `--flash-on-fail`: ping に失敗したときに画面をフラッシュ（色反転）して注意を惹く。
+- `-B`, `--bell-on-fail`: ping に失敗したときにターミナルベルを鳴らして注意を惹く。
+- `-C`, `--color`: カラー表示を有効化（成功=青、遅延=黄、失敗=赤）。
+- `-H`, `--ping-helper`: `ping_helper` バイナリのパス（デフォルト: `./ping_helper`）。
 
 ### 対話操作
 - `n`: 表示名モード切替（ip/rdns/alias）。
