@@ -12,9 +12,9 @@ This file was created or modified with the assistance of an AI (Large Language M
 Review required for correctness, security, and licensing.
 -->
 
-# MultiPing
+# ParaPing
 
-MultiPing は、複数ホストへの ICMP ping を並列に実行し、タイムライン/スパークラインとして表示する対話型ターミナルツールです。ソート・フィルタ・一時停止・スナップショット・ASN/rDNS 表示など、運用向けの操作機能を備えています。
+ParaPing は、複数ホストへの ICMP ping を並列に実行し、タイムライン/スパークラインとして表示する対話型ターミナルツールです。ソート・フィルタ・一時停止・スナップショット・ASN/rDNS 表示など、運用向けの操作機能を備えています。
 
 > English README: [README.md](README.md)
 
@@ -31,6 +31,7 @@ MultiPing は、複数ホストへの ICMP ping を並列に実行し、タイ�
 - 成功/遅延/失敗に応じたカラー表示（任意）。
 - 表示のみ停止、または ping も停止する一時停止モード。
 - タイムスタンプ付きテキストスナップショットの保存。
+- ホスト選択で RTT を全画面 ASCII グラフ表示。
 - 表示時刻・スナップショット時刻のタイムゾーン指定。
 - 入力ファイルからのホスト読み込み（1 行 1 ホスト、`IP,alias` 形式、コメント可）。
 
@@ -74,8 +75,8 @@ python3 ping_wrapper.py google.com
 
 ## インストール
 ```bash
-git clone https://github.com/icecake0141/multiping.git
-cd multiping
+git clone https://github.com/icecake0141/paraping.git
+cd paraping
 python -m pip install -r requirements.txt
 
 # 任意: 特権 ICMP ヘルパーをビルド（Linux のみ）
@@ -85,15 +86,15 @@ sudo make setcap
 
 ## 使い方
 
-![MultiPing デモ](docs/images/usage-demo.gif)
+![ParaPing デモ](docs/images/usage-demo.gif)
 
 ```bash
-./multiping [options] <host1> <host2> ...
+./paraping [options] <host1> <host2> ...
 ```
 
 例（ホスト一覧ファイルと 2 秒タイムアウト）:
 ```bash
-./multiping -t 2 -f hosts.txt
+./paraping -t 2 -f hosts.txt
 ```
 
 ### コマンドラインオプション
@@ -115,6 +116,7 @@ sudo make setcap
 ### 対話操作
 - `n`: 表示名モード切替（ip/rdns/alias）。
 - `v`: 表示切替（timeline/sparkline）。
+- `g`: ホスト選択モードを開き、RTT の全画面グラフを表示。
 - `o`: ソート切替（failures/streak/latency/host）。
 - `f`: フィルタ切替（failures/latency/all）。
 - `a`: ASN 表示の切替（スペース不足時は自動的に非表示）。
@@ -125,10 +127,11 @@ sudo make setcap
 - `w`: サマリーパネルの表示切替。
 - `W`: サマリーパネルの配置切替（左/右/上/下）。
 - `p`: 一時停止/再開（表示のみ or ping + 表示）。
-- `s`: `multiping_snapshot_YYYYMMDD_HHMMSS.txt` を保存。
+- `s`: `paraping_snapshot_YYYYMMDD_HHMMSS.txt` を保存。
 - `←` / `→`: 1 ページ単位で過去/未来へ移動（閲覧中も履歴は記録され、ライブ表示に戻るまで画面は固定）。
 - `↑` / `↓`: ホスト一覧が画面に収まらない場合にスクロール。
 - `H`: ヘルプ表示（任意キーで閉じる）。
+- `ESC`: 全画面グラフ/選択画面を終了。
 - `q`: 終了。
 
 ### 記号の意味

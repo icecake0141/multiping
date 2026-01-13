@@ -12,7 +12,7 @@
 # Review required for correctness, security, and licensing.
 
 """
-MultiPing - Interactive terminal-based ICMP ping monitor.
+ParaPing - Interactive terminal-based ICMP ping monitor.
 
 This module provides an interactive, terminal-based ICMP monitor that pings multiple
 hosts concurrently and visualizes results as a live timeline or sparkline. It includes
@@ -221,7 +221,7 @@ def build_activity_indicator(
 def handle_options():
 
     parser = argparse.ArgumentParser(
-        description="MultiPing - Perform ICMP ping operations to multiple hosts concurrently"
+        description="ParaPing - Perform ICMP ping operations to multiple hosts concurrently"
     )
     parser.add_argument(
         "-t",
@@ -905,7 +905,7 @@ def render_main_view(
 ):
     pause_label = "PAUSED" if paused else "LIVE"
     header = (
-        f"MultiPing - {pause_label} results [{mode_label} | {display_mode}] {timestamp}"
+        f"ParaPing - {pause_label} results [{mode_label} | {display_mode}] {timestamp}"
     )
     if activity_indicator:
         header = f"{header} {activity_indicator}"
@@ -1082,8 +1082,8 @@ def render_help_view(width, height, boxed=False):
         width, height, boxed
     )
     lines = [
-        "MultiPing - Help",
-        "-" * render_width,
+        "ParaPing - Help",
+        "-" * width,
         "  n: cycle display mode (ip/rdns/alias)",
         "  v: toggle view (timeline/sparkline)",
         "  g: select host for fullscreen RTT graph",
@@ -1203,7 +1203,7 @@ def render_fullscreen_rtt_graph(
     pause_label = "PAUSED" if paused else "LIVE"
     graph_label = "Bar" if graph_style == "bar" else "Line"
     header = (
-        f"MultiPing - {pause_label} RTT Graph "
+        f"ParaPing - {pause_label} RTT Graph "
         f"[{host_label} | {graph_label}] {timestamp}"
     )
 
@@ -1566,6 +1566,7 @@ def render_display(
     summary_fullscreen=False,
     asn_width=8,
     header_lines=2,
+    override_lines=None,
 ):
     global LAST_RENDER_LINES
     now_utc = datetime.now(timezone.utc)
@@ -1573,30 +1574,32 @@ def render_display(
     activity_indicator = ""
     if not paused:
         activity_indicator = build_activity_indicator(now_utc)
-    combined_lines = build_display_lines(
-        host_infos,
-        buffers,
-        stats,
-        symbols,
-        panel_position,
-        mode_label,
-        display_mode,
-        summary_mode,
-        sort_mode,
-        filter_mode,
-        slow_threshold,
-        show_help,
-        show_asn,
-        paused,
-        status_message,
-        timestamp,
-        activity_indicator,
-        use_color,
-        host_scroll_offset,
-        summary_fullscreen,
-        asn_width,
-        header_lines,
-    )
+    combined_lines = override_lines
+    if combined_lines is None:
+        combined_lines = build_display_lines(
+            host_infos,
+            buffers,
+            stats,
+            symbols,
+            panel_position,
+            mode_label,
+            display_mode,
+            summary_mode,
+            sort_mode,
+            filter_mode,
+            slow_threshold,
+            show_help,
+            show_asn,
+            paused,
+            status_message,
+            timestamp,
+            activity_indicator,
+            use_color,
+            host_scroll_offset,
+            summary_fullscreen,
+            asn_width,
+            header_lines,
+        )
     if not combined_lines:
         return
 
@@ -2061,7 +2064,7 @@ def main(args):
 
     count_display = "infinite" if args.count == 0 else str(args.count)
     print(
-        f"MultiPing - Pinging {len(all_hosts)} host(s) with timeout={args.timeout}s, "
+        f"ParaPing - Pinging {len(all_hosts)} host(s) with timeout={args.timeout}s, "
         f"count={count_display}, interval={args.interval}s, slow-threshold={args.slow_threshold}s"
     )
 
@@ -2361,7 +2364,7 @@ def main(args):
                         now_utc = datetime.now(timezone.utc)
                         snapshot_dt = now_utc.astimezone(snapshot_tz)
                         snapshot_name = snapshot_dt.strftime(
-                            "multiping_snapshot_%Y%m%d_%H%M%S.txt"
+                            "paraping_snapshot_%Y%m%d_%H%M%S.txt"
                         )
                         snapshot_lines = build_display_lines(
                             host_infos,
