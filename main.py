@@ -1021,10 +1021,8 @@ def render_help_view(width, height):
         "  s : save snapshot to file",
         "  <- / -> : navigate backward/forward in time (1 page)",
         "  up / down : scroll host list",
-        "  H : show help (press any key to close)",
+        "  H : show help (Press any key to close)",
         "  q : quit",
-        "",
-        "Press any key to close this help screen.",
     ]
     return pad_lines(lines, width, height)
 
@@ -1936,6 +1934,8 @@ def main(args):
                             if bell_on_fail
                             else "Bell on fail disabled"
                         )
+                        force_render = True
+                        updated = True
                     elif key == "F":
                         summary_fullscreen = not summary_fullscreen
                         status_message = (
@@ -2190,13 +2190,10 @@ def main(args):
                         stats[host_id]["rtt_count"] += 1
 
                     # Trigger flash or bell on ping failure
-                    if should_flash_on_fail(status, args.flash_on_fail, show_help):
+                    if should_flash_on_fail(status, flash_on_fail, show_help):
                         flash_screen()
-                    if status == "fail":
-                        if flash_on_fail:
-                            flash_screen()
-                        if args.bell_on_fail:
-                            ring_bell()
+                    if status == "fail" and bell_on_fail and not show_help:
+                        ring_bell()
 
                     if not paused:
                         updated = True
