@@ -111,6 +111,41 @@ class TestHandleOptions(unittest.TestCase):
             args = handle_options()
             self.assertEqual(args.count, 0)
 
+    def test_short_options_for_long_flags(self):
+        """Test short options that mirror long-only flags"""
+        with patch(
+            "sys.argv",
+            [
+                "main.py",
+                "-s",
+                "0.7",
+                "-P",
+                "left",
+                "-m",
+                "ping",
+                "-z",
+                "Asia/Tokyo",
+                "-Z",
+                "display",
+                "-F",
+                "-B",
+                "-C",
+                "-H",
+                "/tmp/ping_helper",
+                "example.com",
+            ],
+        ):
+            args = handle_options()
+            self.assertEqual(args.slow_threshold, 0.7)
+            self.assertEqual(args.panel_position, "left")
+            self.assertEqual(args.pause_mode, "ping")
+            self.assertEqual(args.timezone, "Asia/Tokyo")
+            self.assertEqual(args.snapshot_timezone, "display")
+            self.assertTrue(args.flash_on_fail)
+            self.assertTrue(args.bell_on_fail)
+            self.assertTrue(args.color)
+            self.assertEqual(args.ping_helper, "/tmp/ping_helper")
+
 
 class TestReadInputFile(unittest.TestCase):
     """Test input file reading functionality"""

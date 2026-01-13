@@ -218,6 +218,7 @@ def handle_options():
         help="Number of ping attempts per host (default: 0 for infinite)",
     )
     parser.add_argument(
+        "-s",
         "--slow-threshold",
         type=float,
         default=0.5,
@@ -244,6 +245,7 @@ def handle_options():
         required=False,
     )
     parser.add_argument(
+        "-P",
         "--panel-position",
         type=str,
         default="right",
@@ -251,6 +253,7 @@ def handle_options():
         help="Summary panel position (right|left|top|bottom|none)",
     )
     parser.add_argument(
+        "-m",
         "--pause-mode",
         type=str,
         default="display",
@@ -258,12 +261,14 @@ def handle_options():
         help="Pause behavior: display (stop updates only) or ping (pause ping + updates)",
     )
     parser.add_argument(
+        "-z",
         "--timezone",
         type=str,
         default=None,
         help="Display timezone (IANA name, e.g. Asia/Tokyo). Defaults to UTC.",
     )
     parser.add_argument(
+        "-Z",
         "--snapshot-timezone",
         type=str,
         default="utc",
@@ -271,21 +276,25 @@ def handle_options():
         help="Timezone used in snapshot filename (utc|display). Defaults to utc.",
     )
     parser.add_argument(
+        "-F",
         "--flash-on-fail",
         action="store_true",
         help="Flash screen (invert colors) when ping fails",
     )
     parser.add_argument(
+        "-B",
         "--bell-on-fail",
         action="store_true",
         help="Ring terminal bell when ping fails",
     )
     parser.add_argument(
+        "-C",
         "--color",
         action="store_true",
         help="Enable colored output (blue=success, yellow=slow, red=fail)",
     )
     parser.add_argument(
+        "-H",
         "--ping-helper",
         type=str,
         default="./ping_helper",

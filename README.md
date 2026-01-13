@@ -103,17 +103,17 @@ python main.py 1.1.1.1 8.8.8.8
 - `-t`, `--timeout`: Timeout in seconds for each ping (default: 1).
 - `-c`, `--count`: Number of ping attempts per host (default: 0 for infinite).
 - `-i`, `--interval`: Interval in seconds between pings per host (default: 1.0, range: 0.1-60.0).
-- `--slow-threshold`: RTT threshold (seconds) to mark a ping as slow (default: 0.5).
+- `-s`, `--slow-threshold`: RTT threshold (seconds) to mark a ping as slow (default: 0.5).
 - `-v`, `--verbose`: Print raw per-packet output (non-UI).
 - `-f`, `--input`: Read hosts from a file (one per line; format: `IP,alias`; `#` comments supported).
-- `--panel-position`: Summary panel position (`right|left|top|bottom|none`).
-- `--pause-mode`: Pause behavior (`display|ping`).
-- `--timezone`: IANA timezone name for on-screen timestamps.
-- `--snapshot-timezone`: Timezone for snapshot filenames (`utc|display`).
-- `--flash-on-fail`: Flash screen (invert colors) when a ping fails to draw attention.
-- `--bell-on-fail`: Ring terminal bell when a ping fails to draw attention.
-- `--color`: Enable colored output (blue=success, yellow=slow, red=fail).
-- `--ping-helper`: Path to the `ping_helper` binary (default: `./ping_helper`).
+- `-P`, `--panel-position`: Summary panel position (`right|left|top|bottom|none`).
+- `-m`, `--pause-mode`: Pause behavior (`display|ping`).
+- `-z`, `--timezone`: IANA timezone name for on-screen timestamps.
+- `-Z`, `--snapshot-timezone`: Timezone for snapshot filenames (`utc|display`).
+- `-F`, `--flash-on-fail`: Flash screen (invert colors) when a ping fails to draw attention.
+- `-B`, `--bell-on-fail`: Ring terminal bell when a ping fails to draw attention.
+- `-C`, `--color`: Enable colored output (blue=success, yellow=slow, red=fail).
+- `-H`, `--ping-helper`: Path to the `ping_helper` binary (default: `./ping_helper`).
 
 ### Interactive Controls
 - `n`: Cycle display name mode (ip/rdns/alias).
