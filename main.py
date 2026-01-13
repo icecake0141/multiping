@@ -1669,6 +1669,14 @@ def update_history_buffer(
     return last_snapshot_time, history_offset
 
 
+def prepare_terminal_for_exit():
+    if not sys.stdout.isatty():
+        return
+    term_size = get_terminal_size(fallback=(80, 24))
+    sys.stdout.write("\n" * term_size.lines)
+    sys.stdout.flush()
+
+
 def main(args):
 
     # Validate count parameter - allow 0 for infinite
@@ -2234,6 +2242,7 @@ def main(args):
             if stdin_fd is not None and original_term is not None:
                 termios.tcsetattr(stdin_fd, termios.TCSADRAIN, original_term)
 
+    prepare_terminal_for_exit()
     print("\n" + "=" * 60)
     print("SUMMARY")
     print("=" * 60)
