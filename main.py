@@ -1934,6 +1934,8 @@ def main(args):
                             if bell_on_fail
                             else "Bell on fail disabled"
                         )
+                        force_render = True
+                        updated = True
                     elif key == "F":
                         summary_fullscreen = not summary_fullscreen
                         status_message = (
@@ -2188,13 +2190,10 @@ def main(args):
                         stats[host_id]["rtt_count"] += 1
 
                     # Trigger flash or bell on ping failure
-                    if should_flash_on_fail(status, args.flash_on_fail, show_help):
+                    if should_flash_on_fail(status, flash_on_fail, show_help):
                         flash_screen()
-                    if status == "fail":
-                        if flash_on_fail:
-                            flash_screen()
-                        if args.bell_on_fail:
-                            ring_bell()
+                    if status == "fail" and bell_on_fail:
+                        ring_bell()
 
                     if not paused:
                         updated = True
