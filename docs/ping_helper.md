@@ -157,16 +157,25 @@ Packets that don't match **any** of these criteria are silently discarded, and t
 When running multiple ping_helper processes concurrently (e.g., monitoring many hosts):
 
 **Recommended practices:**
-- Use different `icmp_seq` values for concurrent pings to the same host to avoid reply confusion
+- Use different `icmp_seq` values when pinging the **same host** concurrently to avoid reply confusion
 - Monitor system limits: check file descriptor limits (`ulimit -n`) and ICMP rate limits
 - Consider process spawn overhead (~1-5ms per invocation) in high-frequency scenarios
 
 **Example: Monitoring multiple hosts in parallel**
 ```bash
-# Ping multiple hosts with unique sequence numbers
-./ping_helper 8.8.8.8 1000 1 &
-./ping_helper 1.1.1.1 1000 2 &
-./ping_helper 9.9.9.9 1000 3 &
+# Different hosts don't need unique sequence numbers (replies are distinguished by source IP)
+./ping_helper 8.8.8.8 1000 &
+./ping_helper 1.1.1.1 1000 &
+./ping_helper 9.9.9.9 1000 &
+wait
+```
+
+**Example: Concurrent pings to the same host (use different sequence numbers)**
+```bash
+# Pinging the same host concurrently requires different icmp_seq to avoid confusion
+./ping_helper example.com 1000 1 &
+./ping_helper example.com 1000 2 &
+./ping_helper example.com 1000 3 &
 wait
 ```
 

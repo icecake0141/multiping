@@ -72,21 +72,21 @@ def ping_with_helper(host, timeout_ms=1000, helper_path="./ping_helper"):
         ValueError: If timeout_ms is not positive
 
     Examples:
-        >>> # Successful ping
+        Successful ping:
         >>> rtt_ms, ttl = ping_with_helper("8.8.8.8", 1000)
-        >>> print(f"RTT: {rtt_ms}ms, TTL: {ttl}")
-        RTT: 12.345ms, TTL: 64
+        >>> assert rtt_ms is not None and ttl is not None
+        >>> assert rtt_ms > 0 and ttl > 0
 
-        >>> # Timeout (normal, returns None)
+        Timeout (normal, returns None):
         >>> rtt_ms, ttl = ping_with_helper("192.0.2.1", 100)  # Non-routable IP
         >>> assert rtt_ms is None and ttl is None
 
-        >>> # Error handling
+        Error handling:
         >>> try:
         ...     rtt_ms, ttl = ping_with_helper("invalid.example", 1000)
         ... except PingHelperError as e:
-        ...     print(f"Error: {e} (exit code: {e.returncode})")
-        ...     print(f"Helper stderr: {e.stderr}")
+        ...     assert e.returncode in (2, 3, 4, 5, 6, 8)
+        ...     assert e.stderr is not None
     """
     if timeout_ms <= 0:
         raise ValueError("timeout_ms must be a positive integer in milliseconds.")
