@@ -35,6 +35,7 @@ The main logic has been split into separate modules in the paraping/ package.
 """
 
 # Standard library imports for test compatibility (tests patch these from main module)
+# pylint: disable=unused-import
 import os
 import queue
 import select
@@ -44,6 +45,7 @@ import termios
 import threading
 import tty
 from concurrent.futures import ThreadPoolExecutor
+# pylint: enable=unused-import
 
 # Import and re-export from the refactored modules
 from paraping.cli import handle_options, main

@@ -111,6 +111,7 @@ def compute_history_page_step(
     asn_width=8,
     header_lines=2,
 ):
+    """Compute the page step for history navigation based on timeline width."""
     term_size = get_terminal_size(fallback=(80, 24))
     term_width = term_size.columns
     term_height = term_size.lines
@@ -200,6 +201,7 @@ def get_cached_page_step(
 
 
 def build_host_infos(hosts):
+    """Build host information structures from a list of hosts."""
     host_infos = []
     host_map = {}
     for index, entry in enumerate(hosts):
@@ -287,6 +289,7 @@ def update_history_buffer(
     last_snapshot_time,
     history_offset,
 ):
+    """Update history buffer with new snapshot if enough time has elapsed."""
     if (now - last_snapshot_time) < SNAPSHOT_INTERVAL_SECONDS:
         return last_snapshot_time, history_offset
 
@@ -299,7 +302,8 @@ def update_history_buffer(
 
 
 def resolve_render_state(history_offset, history_buffer, buffers, stats, paused):
-    if history_offset > 0 and history_offset <= len(history_buffer):
+    """Resolve the current render state based on history offset."""
+    if 0 < history_offset <= len(history_buffer):
         snapshot = history_buffer[-(history_offset + 1)]
         return snapshot["buffers"], snapshot["stats"], True
     return buffers, stats, paused

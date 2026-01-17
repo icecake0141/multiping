@@ -141,6 +141,7 @@ def worker_ping(
     interval,
     helper_path,
 ):
+    """Worker function to ping a host and put results in a queue."""
     for result in ping_host(
         host_info["host"],
         timeout,
@@ -157,6 +158,7 @@ def worker_ping(
 
 
 def resolve_rdns(ip_address):
+    """Resolve reverse DNS for an IP address."""
     try:
         return socket.gethostbyaddr(ip_address)[0]
     except (socket.herror, socket.gaierror, OSError):
@@ -164,6 +166,7 @@ def resolve_rdns(ip_address):
 
 
 def rdns_worker(request_queue, result_queue, stop_event):
+    """Worker thread for processing reverse DNS requests."""
     while not stop_event.is_set():
         try:
             item = request_queue.get(timeout=0.1)
