@@ -207,6 +207,8 @@ Potential optimizations for large-scale deployments (not currently implemented):
 ## Contributing
 Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines, code quality standards, and how to submit pull requests.
 
+For information about the codebase modularization, module ownership boundaries, test organization, and coverage reporting, see [MODULARIZATION.md](MODULARIZATION.md).
+
 ## Development & Validation
 
 This section provides exact commands for validating your changes locally before submitting a pull request. These commands match the CI pipeline configuration and must pass for PRs to be merged.
@@ -264,12 +266,30 @@ pylint . --fail-under=9.0
 pytest tests/ -v --cov=. --cov-report=term-missing --cov-report=xml
 ```
 
+**Generate HTML coverage report for detailed analysis:**
+```bash
+pytest tests/ -v --cov=. --cov-report=html
+# View report: open htmlcov/index.html in browser
+```
+
 **Run specific test file:**
 ```bash
 pytest tests/test_main.py -v
 ```
 
+**Check coverage by module:**
+```bash
+pytest tests/ --cov=. --cov-report=term
+```
+
+**Run tests with minimum coverage threshold:**
+```bash
+pytest tests/ --cov=. --cov-report=term --cov-fail-under=80
+```
+
 All tests must pass before submitting a PR. Add tests for new functionality.
+
+**Coverage Tracking**: The CI pipeline generates coverage reports for every PR and uploads them to the workflow artifacts. Module-level coverage is displayed in the GitHub Actions summary. For more information on coverage reporting and modularization guidelines, see [MODULARIZATION.md](MODULARIZATION.md).
 
 ### Pre-PR Validation Checklist
 
