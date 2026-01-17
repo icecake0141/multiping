@@ -928,6 +928,9 @@ def main(args):
                             host_select_active = False
                             force_render = True
                             updated = True
+                        # All host selection keys are handled above.
+                        # The 'continue' statement below ensures we don't fall through
+                        # to the main key handlers (e.g., 'n' for mode cycling).
                         continue
                     elif graph_host_id is not None:
                         if key == "\x1b":
