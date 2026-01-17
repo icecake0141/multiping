@@ -152,12 +152,40 @@ Packets that don't match **any** of these criteria are silently discarded, and t
 - **Capability-based security (Linux)**: Use `cap_net_raw` on the binary, **never** on interpreters
 - **Platform-specific**: Optimized for Linux; macOS/BSD may require different privilege handling
 
+### Multi-Process and Batch Scenarios
+
+When running multiple ping_helper processes concurrently (e.g., monitoring many hosts):
+
+**Recommended practices:**
+- Use different `icmp_seq` values for concurrent pings to the same host to avoid reply confusion
+- Monitor system limits: check file descriptor limits (`ulimit -n`) and ICMP rate limits
+- Consider process spawn overhead (~1-5ms per invocation) in high-frequency scenarios
+
+**Example: Monitoring multiple hosts in parallel**
+```bash
+# Ping multiple hosts with unique sequence numbers
+./ping_helper 8.8.8.8 1000 1 &
+./ping_helper 1.1.1.1 1000 2 &
+./ping_helper 9.9.9.9 1000 3 &
+wait
+```
+
+**Example: Sequential pings with controlled sequence numbers**
+```bash
+# Useful for scripted monitoring loops
+for i in {1..10}; do
+  ./ping_helper example.com 1000 $i
+  sleep 1
+done
+```
+
 ### Known Limitations
 
 1. **Fixed packet size**: Uses 64-byte packets (cannot be configured)
 2. **No payload customization**: Sends zero-filled payload
 3. **No ICMP filtering on non-Linux**: `ICMP_FILTER` socket option is Linux-specific
 4. **Process ID wrap**: Very long-running systems with rapid process creation might see PID recycling
+5. **Process spawn overhead**: Each invocation creates a new process; not optimized for sub-millisecond intervals
 
 ## Security Considerations
 
@@ -197,13 +225,120 @@ The helper:
 While the helper is intentionally minimal, potential future enhancements include:
 
 1. **Configurable packet size**: Add optional argument for packet size
-2. **Multiple requests**: Support sending multiple pings in one invocation
+2. **Multiple requests**: Support sending multiple pings in one invocation (batch mode)
 3. **IPv6 support**: Dual-stack ping capability
 4. **Payload patterns**: Customizable payload for detecting corruption
 5. **Statistics mode**: Send multiple pings and output aggregate stats
 6. **Raw output mode**: Include full ICMP header details in output
+7. **Persistent worker mode**: Accept multiple ping requests without process restart
+8. **Shared socket pool**: Reuse raw sockets for multiple pings to reduce overhead
+
+**Performance-oriented extensions:**
+- **Batch mode example**: `./ping_helper --batch hosts.txt` to ping multiple hosts in one process
+- **Persistent worker**: Helper accepts commands via stdin for rapid-fire pings without spawn overhead
+- **Output streaming**: JSON-lines format for programmatic consumption
 
 **Note**: Any extensions must maintain backward compatibility with the current CLI contract.
+
+## Troubleshooting
+
+### Common Issues and Solutions
+
+#### Exit Code 4: Socket Error / Insufficient Privileges
+
+**Symptoms:**
+```
+Error: cannot create raw socket: Operation not permitted
+Note: This program requires cap_net_raw capability or root privileges
+```
+
+**Solutions:**
+1. Verify capabilities are set (Linux):
+   ```bash
+   getcap ./ping_helper
+   # Should show: ping_helper = cap_net_raw+ep
+   ```
+
+2. Re-set capabilities if missing:
+   ```bash
+   sudo make setcap
+   ```
+
+3. Verify the binary hasn't been moved or rebuilt (capabilities are per-inode)
+
+4. On non-Linux systems, run with `sudo` or set setuid bit (not recommended)
+
+#### Exit Code 7: Timeout (Not an Error)
+
+**Symptoms:**
+- No output on stdout
+- Exit code 7
+
+**Context:**
+Exit code 7 is **not an error**; it indicates a normal timeout (no ICMP reply received within timeout_ms). This is expected behavior when:
+- Target host is unreachable or firewalled
+- Network is experiencing packet loss
+- Timeout is too short for the network conditions
+
+**Solutions:**
+- Increase `timeout_ms` value if network RTT is high
+- Verify target host is reachable: `ping <host>` (using system ping)
+- Check firewall rules blocking ICMP
+
+#### Exit Code 2: Argument Validation Error
+
+**Symptoms:**
+```
+Error: timeout_ms must be positive
+Error: icmp_seq must be between 0 and 65535
+```
+
+**Solutions:**
+- Verify arguments are integers in valid ranges:
+  - `timeout_ms`: 1-60000 milliseconds
+  - `icmp_seq`: 0-65535 (optional, default: 1)
+- Check for typos or invalid characters in arguments
+
+#### Exit Code 3: Host Resolution Failed
+
+**Symptoms:**
+```
+Error: cannot resolve host example.invalid: Name or service not known
+```
+
+**Solutions:**
+- Verify hostname is correct and resolvable: `nslookup <host>`
+- Check DNS configuration: `/etc/resolv.conf`
+- Use IP address directly to bypass DNS
+
+#### Unexpected Timeouts Under High Load
+
+**Symptoms:**
+- Frequent exit code 7 when monitoring many hosts concurrently
+- Timeouts on hosts that normally respond quickly
+
+**Possible Causes and Solutions:**
+1. **Kernel ICMP rate limiting**:
+   ```bash
+   # Check current limits (Linux)
+   sysctl net.ipv4.icmp_ratelimit
+   # Increase limit if needed (requires root)
+   sudo sysctl -w net.ipv4.icmp_ratelimit=100
+   ```
+
+2. **File descriptor limits**:
+   ```bash
+   ulimit -n  # Check current limit
+   ulimit -n 4096  # Increase limit
+   ```
+
+3. **Socket buffer drops** (check system logs):
+   ```bash
+   # Increase system-wide socket buffer limits (Linux)
+   sudo sysctl -w net.core.rmem_max=8388608
+   ```
+
+4. **Process spawn overhead**: Consider increasing ping intervals or reducing concurrent host count
 
 ## Implementation Details
 
