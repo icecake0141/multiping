@@ -49,8 +49,8 @@ unsigned short checksum(void *b, int len) {
 }
 
 int main(int argc, char *argv[]) {
-    if (argc != 3) {
-        fprintf(stderr, "Usage: %s <host> <timeout_ms>\n", argv[0]);
+    if (argc < 3 || argc > 4) {
+        fprintf(stderr, "Usage: %s <host> <timeout_ms> [icmp_seq]\n", argv[0]);
         return 1;
     }
 
@@ -76,6 +76,24 @@ int main(int argc, char *argv[]) {
         return 2;
     }
     int timeout_ms = (int)timeout_value;
+
+    /* Parse optional icmp_seq argument (default: 1) */
+    unsigned short icmp_seq_value = 1;
+    if (argc == 4) {
+        const char *seq_arg = argv[3];
+        char *seq_endptr = NULL;
+        errno = 0;
+        long seq_long = strtol(seq_arg, &seq_endptr, 10);
+        if (seq_endptr == seq_arg || *seq_endptr != '\0') {
+            fprintf(stderr, "Error: icmp_seq must be an integer value\n");
+            return 2;
+        }
+        if (errno == ERANGE || seq_long < 0 || seq_long > 65535) {
+            fprintf(stderr, "Error: icmp_seq must be between 0 and 65535\n");
+            return 2;
+        }
+        icmp_seq_value = (unsigned short)seq_long;
+    }
 
     /* Resolve hostname */
     struct addrinfo hints, *res;
@@ -132,7 +150,7 @@ int main(int argc, char *argv[]) {
     icmp_hdr->icmp_type = ICMP_ECHO;
     icmp_hdr->icmp_code = 0;
     icmp_hdr->icmp_id = htons(getpid() & 0xFFFF);
-    icmp_hdr->icmp_seq = htons(1);
+    icmp_hdr->icmp_seq = htons(icmp_seq_value);
     icmp_hdr->icmp_cksum = 0;
     icmp_hdr->icmp_cksum = checksum(icmp_hdr, PACKET_SIZE);
 
@@ -161,7 +179,7 @@ int main(int argc, char *argv[]) {
 
     /* Expected values for matching reply */
     unsigned short expected_id = getpid() & 0xFFFF;
-    unsigned short expected_seq = 1;
+    unsigned short expected_seq = icmp_seq_value;
     uint32_t expected_addr = dest_addr->sin_addr.s_addr;
     int reply_ttl = -1;
 
@@ -238,6 +256,18 @@ int main(int argc, char *argv[]) {
             continue;
         }
         
+        /* Validate IP version is 4 */
+        if (ip_hdr->ip_v != 4) {
+            /* Wrong IP version, skip packet */
+            continue;
+        }
+        
+        /* Validate IP protocol is ICMP (1) */
+        if (ip_hdr->ip_p != IPPROTO_ICMP) {
+            /* Not an ICMP packet, skip it */
+            continue;
+        }
+        
         /* Now verify the packet is long enough for this IP header + ICMP header */
         if (recv_len < ip_header_len + ICMP_HEADER_SIZE) {
             /* Packet too short, skip it and continue waiting */
@@ -249,6 +279,12 @@ int main(int argc, char *argv[]) {
         /* Check if this is an ICMP ECHOREPLY */
         if (recv_icmp->icmp_type != ICMP_ECHOREPLY) {
             /* Not an echo reply, skip it and continue waiting */
+            continue;
+        }
+        
+        /* Check ICMP code is 0 for echo reply */
+        if (recv_icmp->icmp_code != 0) {
+            /* Invalid code for echo reply, skip it */
             continue;
         }
 
