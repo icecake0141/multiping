@@ -159,7 +159,7 @@ Example (explicit IPv4 addresses only):
 - `←` / `→`: Navigate backward/forward in time by one page. History keeps recording while browsing; the view is frozen until you return to live.
 - `↑` / `↓`: Move selection in the host picker and scroll the host list when it exceeds the terminal height.
 - `H`: Show help (press any key to close).
-- `ESC`: Exit fullscreen graph/selection.
+- `ESC`: Exit fullscreen graph.
 - `q`: Quit.
 
 ### Timeline/Sparkline Legend
