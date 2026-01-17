@@ -15,28 +15,69 @@
 ASN lookup for ParaPing.
 
 This module provides functions for performing ASN lookups via Team Cymru's
-whois service and managing ASN worker threads with caching.
+whois service and managing ASN worker threads with caching. The module is
+designed with separation of concerns:
+- Pure parsing functions (unit-testable without network)
+- Network client (can be mocked for testing)
+- Caching/retry policy (unit-testable with mocked time)
 """
 
 import queue
 import socket
 
 
-def resolve_asn(ip_address, timeout=3.0, max_bytes=65536):
+def parse_asn_response(response):
     """
-    Resolve ASN for an IP address via Team Cymru whois service.
+    Parse ASN from Team Cymru whois response.
+    
+    This is a pure function that takes raw response text and extracts the ASN.
+    It can be unit-tested without any network I/O.
+    
+    Args:
+        response: String containing the whois response
+        
+    Returns:
+        ASN string (e.g., "AS15133") if successful, None if parsing fails
+        
+    Examples:
+        >>> parse_asn_response("AS      | IP               | BGP Prefix\\n15133   | 8.8.8.8          | 8.8.8.0/24")
+        'AS15133'
+        >>> parse_asn_response("NA | 127.0.0.1 | NA")
+        None
+        >>> parse_asn_response("")
+        None
+    """
+    lines = [line for line in response.splitlines() if line.strip()]
+    if len(lines) < 2:
+        return None
+    parts = [part.strip() for part in lines[1].split("|")]
+    if not parts:
+        return None
+    asn = parts[0].replace("AS", "").strip()
+    if not asn or asn.upper() == "NA":
+        return None
+    return f"AS{asn}"
+
+
+def fetch_asn_via_whois(ip_address, timeout=3.0, max_bytes=65536, host="whois.cymru.com", port=43):
+    """
+    Fetch raw ASN response from Team Cymru whois service via socket.
+    
+    This function handles network I/O and can be mocked in tests.
     
     Args:
         ip_address: IP address string to lookup
         timeout: Socket timeout in seconds
         max_bytes: Maximum bytes to read from socket
+        host: Whois server hostname
+        port: Whois server port
         
     Returns:
-        ASN string (e.g., "AS15133") if successful, None if lookup fails
+        Raw response string if successful, None if network error occurs
     """
     query = f" -v {ip_address}\n".encode("utf-8")
     try:
-        with socket.create_connection(("whois.cymru.com", 43), timeout=timeout) as sock:
+        with socket.create_connection((host, port), timeout=timeout) as sock:
             sock.settimeout(timeout)
             sock.sendall(query)
             chunks = []
@@ -52,18 +93,28 @@ def resolve_asn(ip_address, timeout=3.0, max_bytes=65536):
                 total_read += len(chunk)
     except (socket.timeout, OSError):
         return None
+    
+    return b"".join(chunks).decode("utf-8", errors="ignore")
 
-    response = b"".join(chunks).decode("utf-8", errors="ignore")
-    lines = [line for line in response.splitlines() if line.strip()]
-    if len(lines) < 2:
+
+def resolve_asn(ip_address, timeout=3.0, max_bytes=65536):
+    """
+    Resolve ASN for an IP address via Team Cymru whois service.
+    
+    This is the high-level function that combines network fetch and parsing.
+    
+    Args:
+        ip_address: IP address string to lookup
+        timeout: Socket timeout in seconds
+        max_bytes: Maximum bytes to read from socket
+        
+    Returns:
+        ASN string (e.g., "AS15133") if successful, None if lookup fails
+    """
+    response = fetch_asn_via_whois(ip_address, timeout, max_bytes)
+    if response is None:
         return None
-    parts = [part.strip() for part in lines[1].split("|")]
-    if not parts:
-        return None
-    asn = parts[0].replace("AS", "").strip()
-    if not asn or asn.upper() == "NA":
-        return None
-    return f"AS{asn}"
+    return parse_asn_response(response)
 
 
 def asn_worker(request_queue, result_queue, stop_event, timeout):
