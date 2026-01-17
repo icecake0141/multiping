@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # Copyright 2025 icecake0141
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -9,11 +8,10 @@
 #     http://www.apache.org/licenses/LICENSE-2.0
 #
 # This file was created or modified with the assistance of an AI (Large Language Model).
-# Review required for correctness, security, and licensing.
+# Review for correctness and security.
 
-from main import handle_options, main
+"""
+ParaPing package - Interactive terminal-based ICMP ping monitor.
+"""
 
-
-if __name__ == "__main__":
-    options = handle_options()
-    main(options)
+__version__ = "1.0.0"
