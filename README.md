@@ -191,7 +191,7 @@ This checks for Python syntax errors and undefined names. Zero errors required.
 
 **2. Flake8 (style - informational):**
 ```bash
-flake8 . --count --max-complexity=10 --max-line-length=127 --statistics
+flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 ```
 This reports style violations (line length, complexity, PEP 8). Currently informational only, but fixing these issues is encouraged.
 
@@ -204,7 +204,7 @@ This checks code quality and must score at least 9.0/10 to pass.
 **Run all lint checks at once:**
 ```bash
 flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics && \
-flake8 . --count --max-complexity=10 --max-line-length=127 --statistics && \
+flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics && \
 pylint . --fail-under=9.0
 ```
 
