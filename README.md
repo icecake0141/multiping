@@ -70,6 +70,27 @@ python3 ping_wrapper.py google.com
 
 If `ping_wrapper.py` fails, its JSON output includes an `error` field with details from `ping_helper` (including stderr when available) to aid troubleshooting.
 
+**Helper CLI Contract:**
+The `ping_helper` binary accepts the following arguments:
+```bash
+ping_helper <host> <timeout_ms> [icmp_seq]
+```
+- `<host>`: Hostname or IPv4 address (required)
+- `<timeout_ms>`: Timeout in milliseconds, 1-60000 (required)
+- `[icmp_seq]`: Optional ICMP sequence number, 0-65535 (default: 1)
+
+**Output and Exit Codes:**
+- **Success (exit 0)**: Prints `rtt_ms=<value> ttl=<value>` to stdout
+- **Timeout (exit 7)**: No output, returns exit code 7 (normal timeout, not an error)
+- **Errors (exit 1-6, 8)**: Error message to stderr with specific exit codes:
+  - 1: Invalid arguments
+  - 2: Argument validation error (timeout_ms or icmp_seq out of range)
+  - 3: Host resolution failed
+  - 4: Socket error or insufficient privileges
+  - 5: Send error
+  - 6: Select error
+  - 8: Receive error
+
 **Documentation:** For detailed information about `ping_helper`'s design, CLI contract, validation logic, and limitations, see [docs/ping_helper.md](docs/ping_helper.md).
 
 **Note for macOS/BSD users:** The `setcap` command is Linux-specific and not available on macOS or BSD systems. On these platforms, you would need to use the setuid bit instead (e.g., `sudo chown root:wheel ping_helper && sudo chmod u+s ping_helper`), but this is not recommended for security reasons. It's better to run the main Python script with `sudo` on these platforms.
@@ -154,6 +175,34 @@ Example (explicit IPv4 addresses only):
 - The monitor starts one worker thread per host and enforces a hard limit of 128 hosts. It exits with an error if exceeded.
 - When the summary panel is positioned at the top/bottom, it expands to use available empty rows.
 - When the summary panel is positioned at the top/bottom, it shows all summary fields if the width allows.
+
+## Performance and Scalability
+
+### Current Architecture
+ParaPing uses a **one helper process per ping** model where each ping invocation spawns a new `ping_helper` process. This design prioritizes:
+- **Security**: Minimal privilege separation with capability-based access control
+- **Simplicity**: Each helper is independent with no shared state
+- **Reliability**: Process isolation prevents one failed ping from affecting others
+
+### Multi-Host Performance
+The current architecture is optimized for **moderate concurrent host monitoring** (up to 128 hosts):
+- Each host runs in its own worker thread with independent ping processes
+- Connected sockets and ICMP filters reduce per-process packet fan-out
+- 256KB receive buffers minimize packet drops under high ICMP volume
+
+### Scalability Considerations
+For high-volume or batch scenarios (hundreds of hosts, sub-second intervals):
+- **Process overhead**: Spawning processes adds ~1-5ms latency per ping
+- **System limits**: Each ping creates a raw socket; check `ulimit -n` for file descriptor limits
+- **Kernel load**: High ping rates may require tuning socket buffer sizes or ICMP rate limits
+
+### Future Enhancements
+Potential optimizations for large-scale deployments (not currently implemented):
+- **Batch mode**: Single helper process handling multiple hosts to reduce process spawn overhead
+- **Persistent workers**: Long-lived helper processes accepting multiple ping requests
+- **Shared socket pool**: Reusable raw sockets for same-destination pings
+
+**Note**: The current one-process-per-ping model is intentional and provides the best security/reliability trade-off for typical monitoring workloads (1-128 hosts at 1-second intervals). For different requirements, see `docs/ping_helper.md` for architectural details and extension points.
 
 ## Contributing
 Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines, code quality standards, and how to submit pull requests.

@@ -17,6 +17,14 @@ Python wrapper for the privileged ICMP ping_helper.
 This module provides a function to ping a host using the compiled ping_helper
 binary, which has the cap_net_raw capability set. This allows non-root users
 to send ICMP echo requests without granting privileges to the Python interpreter.
+
+The ping_helper binary follows a strict CLI contract:
+  - Usage: ping_helper <host> <timeout_ms> [icmp_seq]
+  - Success (exit 0): Outputs "rtt_ms=<value> ttl=<value>"
+  - Timeout (exit 7): No output, normal timeout behavior (not an error)
+  - Errors (exit 1-6, 8): Error message to stderr with specific exit codes
+
+For detailed information about the helper contract, see docs/ping_helper.md.
 """
 
 import os
@@ -38,6 +46,10 @@ def ping_with_helper(host, timeout_ms=1000, helper_path="./ping_helper"):
     """
     Ping a host using the ping_helper binary.
 
+    This function wraps the ping_helper C binary and handles its exit codes
+    according to the documented CLI contract. It distinguishes between normal
+    timeouts (exit 7) and actual errors (other non-zero exit codes).
+
     Args:
         host: The hostname or IP address to ping
         timeout_ms: Timeout in milliseconds (default: 1000)
@@ -45,10 +57,36 @@ def ping_with_helper(host, timeout_ms=1000, helper_path="./ping_helper"):
 
     Returns:
         tuple[float | None, int | None]: (RTT in milliseconds, TTL) on success;
-        (None, None) on timeout or error
+        (None, None) on timeout (normal behavior, not an error)
 
     Raises:
         FileNotFoundError: If the ping_helper binary is not found
+        PingHelperError: If the helper exits with an error code (1-6, 8)
+            - Exit 1: Invalid arguments
+            - Exit 2: Argument validation error
+            - Exit 3: Host resolution failed
+            - Exit 4: Socket error or insufficient privileges
+            - Exit 5: Send error
+            - Exit 6: Select error
+            - Exit 8: Receive error
+        ValueError: If timeout_ms is not positive
+
+    Examples:
+        Successful ping:
+        >>> rtt_ms, ttl = ping_with_helper("8.8.8.8", 1000)
+        >>> assert rtt_ms is not None and ttl is not None
+        >>> assert rtt_ms > 0 and ttl > 0
+
+        Timeout (normal, returns None):
+        >>> rtt_ms, ttl = ping_with_helper("192.0.2.1", 100)  # Non-routable IP
+        >>> assert rtt_ms is None and ttl is None
+
+        Error handling:
+        >>> try:
+        ...     rtt_ms, ttl = ping_with_helper("invalid.example", 1000)
+        ... except PingHelperError as e:
+        ...     assert e.returncode in (2, 3, 4, 5, 6, 8)
+        ...     assert e.stderr is not None
     """
     if timeout_ms <= 0:
         raise ValueError("timeout_ms must be a positive integer in milliseconds.")
