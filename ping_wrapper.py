@@ -104,10 +104,6 @@ def ping_with_helper(host, timeout_ms=1000, helper_path="./ping_helper"):
 
     except subprocess.TimeoutExpired:
         return (None, None)
-    except PingHelperError:
-        raise
-    except Exception:
-        return (None, None)
 
 
 def main():
