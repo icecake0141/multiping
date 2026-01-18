@@ -22,6 +22,7 @@ import ipaddress
 import socket
 import sys
 from collections import deque
+from types import SimpleNamespace
 
 import ui_render
 from ui_render import (
@@ -61,8 +62,6 @@ def _normalize_term_size(term_size):
     # Handle tuple or list (columns, lines)
     if isinstance(term_size, (tuple, list)) and len(term_size) >= 2:
         try:
-            # Use types.SimpleNamespace for a lightweight object
-            from types import SimpleNamespace
             return SimpleNamespace(columns=int(term_size[0]), lines=int(term_size[1]))
         except (ValueError, TypeError, IndexError):
             return None
@@ -71,7 +70,6 @@ def _normalize_term_size(term_size):
     if isinstance(term_size, dict):
         if 'columns' in term_size and 'lines' in term_size:
             try:
-                from types import SimpleNamespace
                 return SimpleNamespace(
                     columns=int(term_size['columns']),
                     lines=int(term_size['lines'])
