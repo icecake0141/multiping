@@ -83,8 +83,9 @@ def _compute_initial_timeline_width(host_labels, term_size, panel_position):
     # Normalize term_size defensively
     normalized_size = _normalize_term_size(term_size)
     if normalized_size is None:
-        # Fallback to conservative default
-        return 1
+        # Fallback to reasonable default timeline width
+        # Typical 80-column terminal minus label area (~20 chars) = ~60
+        return 60
 
     status_box_height = (
         3 if normalized_size.lines >= 4 and normalized_size.columns >= 2 else 1
