@@ -385,7 +385,5 @@ class TestFlashAndBell(unittest.TestCase):
         self.assertFalse(should_flash_on_fail("fail", False, False))
 
 
-
-
 if __name__ == "__main__":
     unittest.main()
