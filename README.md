@@ -14,7 +14,7 @@ Review required for correctness, security, and licensing.
 
 # ParaPing
 
-ParaPing is an interactive, terminal-based ICMP monitor that pings many hosts in parallel and visualizes results as a live timeline or sparkline. It adds useful operator controls like sorting, filtering, pause modes, snapshots, and optional ASN/rDNS display for fast network triage.
+ParaPing is an interactive, terminal-based ICMP monitor that pings many hosts in parallel and visualizes results as a live timeline or sparkline. It provides operator controls for sorting, filtering, pausing, snapshots, and per-host RTT inspection to aid rapid network triage.
 
 > 日本語版 README: [README.ja.md](README.ja.md)
 
@@ -44,8 +44,7 @@ ParaPing is an interactive, terminal-based ICMP monitor that pings many hosts in
 
 ### Linux-Specific: Privileged ICMP Helper (Recommended)
 
-On Linux, use the included `ping_helper` binary with capability-based privileges instead of running Python as root. This is more secure as it limits raw socket access to a single small binary.
-The helper also connects its raw socket and applies ICMP filters to reduce per-process packet fan-out, which improves reliability when monitoring many hosts concurrently.
+On Linux, use the included `ping_helper` binary with capability-based privileges instead of running Python as root. This is more secure as it limits raw socket access to a single small binary. The helper also connects its raw socket and applies ICMP filters to reduce per-process packet fan-out, which improves reliability when monitoring many hosts concurrently.
 
 **Dependencies:**
 - `gcc` (for building the helper)
@@ -93,7 +92,7 @@ ping_helper <host> <timeout_ms> [icmp_seq]
 
 **Documentation:** For detailed information about `ping_helper`'s design, CLI contract, validation logic, and limitations, see [docs/ping_helper.md](docs/ping_helper.md).
 
-**Note for macOS/BSD users:** The `setcap` command is Linux-specific and not available on macOS or BSD systems. On these platforms, you would need to use the setuid bit instead (e.g., `sudo chown root:wheel ping_helper && sudo chmod u+s ping_helper`), but this is not recommended for security reasons. It's better to run the main Python script with `sudo` on these platforms.
+**Note for macOS/BSD users:** The `setcap` command is Linux-specific and not available on macOS or BSD systems. On these platforms, you would need to use the setuid bit instead (e.g., `sudo chown root:wheel ping_helper && sudo chmod u+s ping_helper`), but this is less secure and not recommended. Follow platform best practices for granting minimal privilege.
 
 **Security Note:** Never grant `cap_net_raw` or any capabilities to `/usr/bin/python3` or other general-purpose interpreters. Only grant the minimal required privilege to the specific `ping_helper` binary.
 
@@ -157,7 +156,7 @@ Example (explicit IPv4 addresses only):
 - `p`: Pause/resume (display only or ping + display).
 - `s`: Save a snapshot to `paraping_snapshot_YYYYMMDD_HHMMSS.txt`.
 - `←` / `→`: Navigate backward/forward in time by one page. History keeps recording while browsing; the view is frozen until you return to live.
-- `↑` / `↓`: Move selection in the host picker and scroll the host list when it exceeds the terminal height.
+- `↑` / `↓`: Scroll the host list (when not in host-selection mode). In host-selection mode use `n` (next) and `p` (previous) to move the selection; when the selection moves beyond the visible area, the host list scrolls to keep the selection in view.
 - `H`: Show help (press any key to close).
 - `ESC`: Exit fullscreen graph.
 - `q`: Quit.
@@ -169,7 +168,7 @@ Example (explicit IPv4 addresses only):
 - When `--color` is enabled: white=success, yellow=slow, red=failure.
 
 ## Notes
-- ICMP requires elevated privileges (run with `sudo` or Administrator on Windows).
+- ICMP requires elevated privileges (run with `sudo` or Administrator on Windows) unless using the capability-based helper on Linux.
 - ASN lookups use `whois.cymru.com`; blocked networks will show blank ASN values.
 - IPv6 is not supported; use IPv4 addresses or hostnames that resolve to IPv4.
 - The monitor starts one worker thread per host and enforces a hard limit of 128 hosts. It exits with an error if exceeded.
@@ -202,7 +201,7 @@ Potential optimizations for large-scale deployments (not currently implemented):
 - **Persistent workers**: Long-lived helper processes accepting multiple ping requests
 - **Shared socket pool**: Reusable raw sockets for same-destination pings
 
-**Note**: The current one-process-per-ping model is intentional and provides the best security/reliability trade-off for typical monitoring workloads (1-128 hosts at 1-second intervals). For different requirements, see `docs/ping_helper.md` for architectural details and extension points.
+**Note**: The current one-process-per-ping model is intentional and provides the best security/reliability trade-off for typical monitoring workloads (1-128 hosts at 1-second intervals). For different workloads, consider the above optimizations.
 
 ## Contributing
 Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines, code quality standards, and how to submit pull requests.
@@ -227,7 +226,7 @@ sudo make setcap
 
 **Platform notes:**
 - **Linux**: Use `setcap` to grant `cap_net_raw` to the `ping_helper` binary. This is more secure than running Python as root.
-- **macOS/BSD**: The `setcap` command is not available. You can use the setuid bit (`sudo chown root:wheel ping_helper && sudo chmod u+s ping_helper`), but this is not recommended for security reasons. Alternatively, run the main Python script with `sudo`.
+- **macOS/BSD**: The `setcap` command is not available. You can use the setuid bit (`sudo chown root:wheel ping_helper && sudo chmod u+s ping_helper`), but this is not recommended for security reasons.
 - **Security**: Never grant `cap_net_raw` or any capabilities to general-purpose interpreters like `/usr/bin/python3`. Only grant the minimal required privilege to the specific `ping_helper` binary.
 
 ### Linting
@@ -288,8 +287,6 @@ pytest tests/ --cov=. --cov-report=term --cov-fail-under=80
 ```
 
 All tests must pass before submitting a PR. Add tests for new functionality.
-
-**Coverage Tracking**: The CI pipeline generates coverage reports for every PR and uploads them to the workflow artifacts. Module-level coverage is displayed in the GitHub Actions summary. For more information on coverage reporting and modularization guidelines, see [MODULARIZATION.md](MODULARIZATION.md).
 
 ### Pre-PR Validation Checklist
 
