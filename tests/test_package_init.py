@@ -25,3 +25,7 @@ class TestPackageInit(unittest.TestCase):
         self.assertTrue(hasattr(paraping, "__version__"))
         self.assertIsInstance(paraping.__version__, str)
         self.assertTrue(paraping.__version__)
+
+
+if __name__ == "__main__":
+    unittest.main()
