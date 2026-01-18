@@ -52,6 +52,7 @@ class TestTermSizeNormalization(unittest.TestCase):
         """Test normalization of tuple-like sequences"""
 
         class TupleLikeSize(Sequence):
+            """Tuple-like sequence wrapper for term size testing."""
             def __init__(self, columns, lines):
                 self._values = (columns, lines)
 

@@ -41,6 +41,14 @@ SNAPSHOT_INTERVAL_SECONDS = 1.0  # Take snapshot every second
 MAX_HOST_THREADS = 128  # Hard cap to avoid unbounded thread growth.
 
 
+def _build_term_size(columns_value, lines_value):
+    """Build a terminal size namespace from column and line values."""
+    try:
+        return SimpleNamespace(columns=int(columns_value), lines=int(lines_value))
+    except (ValueError, TypeError):
+        return None
+
+
 def _normalize_term_size(term_size):
     """
     Normalize terminal size to an object with .columns and .lines attributes.
@@ -55,27 +63,14 @@ def _normalize_term_size(term_size):
     """
     if term_size is None:
         return None
-
-    def build_size(columns_value, lines_value):
-        try:
-            return SimpleNamespace(columns=int(columns_value), lines=int(lines_value))
-        except (ValueError, TypeError):
-            return None
-
-    normalized = None
-
     if hasattr(term_size, "columns") and hasattr(term_size, "lines"):
-        normalized = build_size(term_size.columns, term_size.lines)
-    elif isinstance(term_size, dict):
-        normalized = build_size(term_size.get("columns"), term_size.get("lines"))
-    elif isinstance(term_size, Sequence) and not isinstance(term_size, (str, bytes)):
+        return _build_term_size(term_size.columns, term_size.lines)
+    if isinstance(term_size, dict):
+        return _build_term_size(term_size.get("columns"), term_size.get("lines"))
+    if isinstance(term_size, Sequence) and not isinstance(term_size, (str, bytes)):
         if len(term_size) >= 2:
-            try:
-                normalized = build_size(term_size[0], term_size[1])
-            except (IndexError, TypeError):
-                normalized = None
-
-    return normalized
+            return _build_term_size(term_size[0], term_size[1])
+    return None
 
 
 def parse_host_file_line(line, line_number, input_file):
@@ -214,11 +209,7 @@ def compute_history_page_step(
     if timeline_width is None:
         timeline_width = getattr(layout_result, "timeline_width", None)
 
-    # Method 3: Try mapping key lookup
-    if timeline_width is None and isinstance(layout_result, dict):
-        timeline_width = layout_result.get("timeline_width")
-
-    # Method 4: Fallback to a reasonable default based on main_width
+    # Method 3: Fallback to a reasonable default based on main_width
     if timeline_width is None:
         # Estimate: main_width minus label column and spacing
         timeline_width = max(1, main_width - 15)

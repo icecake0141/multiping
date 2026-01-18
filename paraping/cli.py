@@ -17,6 +17,7 @@ This module contains the main entry point and command-line argument handling.
 """
 
 import argparse
+import os
 import queue
 import sys
 import termios
@@ -177,7 +178,6 @@ def handle_options():
     return args
 
 
-
 def main(args):
     """Run the ParaPing monitor with parsed arguments."""
     # Validate count parameter - allow 0 for infinite
@@ -228,6 +228,7 @@ def main(args):
             )
             return
     snapshot_tz = display_tz if args.snapshot_timezone == "display" else timezone.utc
+    ping_helper_path = os.path.expanduser(args.ping_helper)
 
     symbols = {"success": ".", "fail": "x", "slow": "!"}
     initial_term_size = get_terminal_size(fallback=(80, 24))
@@ -366,7 +367,7 @@ def main(args):
                 stop_event,
                 result_queue,
                 args.interval,
-                args.ping_helper,
+                ping_helper_path,
             )
 
         completed_hosts = 0
