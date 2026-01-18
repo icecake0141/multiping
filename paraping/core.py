@@ -49,7 +49,7 @@ def parse_host_file_line(line, line_number, input_file):
         input_file: Path to the input file (for error messages)
         
     Returns:
-        Dict with host info (host, alias, ip) or None if invalid/comment
+        Dict with keys 'host', 'alias', 'ip' or None if invalid/comment
     """
     stripped = line.strip()
     if not stripped or stripped.startswith("#"):
