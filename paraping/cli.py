@@ -17,11 +17,8 @@ This module contains the main entry point and command-line argument handling.
 """
 
 import argparse
-import math
 import os
 import queue
-import re
-import select
 import sys
 import termios
 import threading
@@ -35,34 +32,20 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from paraping.core import (
     read_input_file,
     build_host_infos,
-    create_state_snapshot,
     update_history_buffer,
     resolve_render_state,
-    compute_history_page_step,
     get_cached_page_step,
     MAX_HOST_THREADS,
     HISTORY_DURATION_MINUTES,
     SNAPSHOT_INTERVAL_SECONDS,
 )
 from paraping.pinger import worker_ping, rdns_worker
-from ping_wrapper import ping_with_helper
-from network_asn import resolve_asn, asn_worker, should_retry_asn
-from input_keys import parse_escape_sequence, read_key
-from stats import (
-    compute_fail_streak,
-    latest_ttl_value,
-    latest_rtt_value,
-    build_streak_label,
-    build_summary_suffix,
-    build_summary_all_suffix,
-    compute_summary_data,
-)
+from network_asn import asn_worker, should_retry_asn
+from input_keys import read_key
 from ui_render import (
-    strip_ansi,
-    visible_len,
-    truncate_visible,
     get_terminal_size,
     compute_main_layout,
+    compute_panel_sizes,
     compute_host_scroll_bounds,
     build_display_entries,
     render_help_view,
@@ -82,8 +65,35 @@ from ui_render import (
 )
 
 
-def handle_options():
+def _compute_initial_timeline_width(host_labels, term_size, panel_position, header_lines=2):
+    """
+    Compute the initial timeline width for buffer sizing.
 
+    Args:
+        host_labels: List of host labels to size the label column.
+        term_size: Terminal size object with columns/lines attributes.
+        panel_position: Current summary panel position selection.
+        header_lines: Number of header lines in the main panel.
+
+    Returns:
+        Positive integer timeline width for buffer maxlen sizing.
+    """
+    status_box_height = 3 if term_size.lines >= 4 and term_size.columns >= 2 else 1
+    panel_height = max(1, term_size.lines - status_box_height)
+    main_width, main_height, _, _, _ = compute_panel_sizes(
+        term_size.columns, panel_height, panel_position
+    )
+    _, _, timeline_width, _ = compute_main_layout(
+        host_labels, main_width, main_height, header_lines
+    )
+    try:
+        return max(1, int(timeline_width))
+    except (TypeError, ValueError):
+        return 1
+
+
+def handle_options():
+    """Parse and validate command-line arguments."""
     parser = argparse.ArgumentParser(
         description="ParaPing - Perform ICMP ping operations to multiple hosts concurrently"
     )
@@ -196,10 +206,8 @@ def handle_options():
     return args
 
 
-
-
 def main(args):
-
+    """Run the ParaPing monitor with parsed arguments."""
     # Validate count parameter - allow 0 for infinite
     if args.count < 0:
         print("Error: Count must be a non-negative number (0 for infinite).")
@@ -248,13 +256,18 @@ def main(args):
             )
             return
     snapshot_tz = display_tz if args.snapshot_timezone == "display" else timezone.utc
+    ping_helper_path = os.path.expanduser(args.ping_helper)
+    panel_position = args.panel_position
+    panel_toggle_default = args.panel_position if args.panel_position != "none" else "right"
+    last_panel_position = panel_position if panel_position != "none" else None
 
     symbols = {"success": ".", "fail": "x", "slow": "!"}
-    term_size = get_terminal_size(fallback=(80, 24))
+    initial_term_size = get_terminal_size(fallback=(80, 24))
     host_infos, host_info_map = build_host_infos(all_hosts)
     host_labels = [info["alias"] for info in host_infos]
-    _, _, timeline_width, _ = compute_main_layout(
-        host_labels, term_size.columns, term_size.lines, header_lines=2
+    header_lines = 2
+    timeline_width = _compute_initial_timeline_width(
+        host_labels, initial_term_size, panel_position, header_lines
     )
     buffers = {
         info["id"]: {
@@ -280,10 +293,10 @@ def main(args):
     }
     result_queue = queue.Queue()
 
-    count_display = "infinite" if args.count == 0 else str(args.count)
+    count_label = "infinite" if args.count == 0 else str(args.count)
     print(
         f"ParaPing - Pinging {len(all_hosts)} host(s) with timeout={args.timeout}s, "
-        f"count={count_display}, interval={args.interval}s, slow-threshold={args.slow_threshold}s"
+        f"count={count_label}, interval={args.interval}s, slow-threshold={args.slow_threshold}s"
     )
 
     modes = ["ip", "rdns", "alias"]
@@ -313,9 +326,6 @@ def main(args):
     asn_cache = {}
     asn_timeout = 3.0
     asn_failure_ttl = 300.0
-    panel_position = args.panel_position
-    panel_toggle_default = args.panel_position if args.panel_position != "none" else "right"
-    last_panel_position = panel_position if panel_position != "none" else None
     host_select_active = False
     host_select_index = 0
     graph_host_id = None
@@ -385,7 +395,7 @@ def main(args):
                 stop_event,
                 result_queue,
                 args.interval,
-                args.ping_helper,
+                ping_helper_path,
             )
 
         completed_hosts = 0
@@ -673,7 +683,7 @@ def main(args):
                     elif key == "arrow_up":
                         scroll_buffers = buffers
                         scroll_stats = stats
-                        if history_offset > 0 and history_offset <= len(history_buffer):
+                        if 0 < history_offset <= len(history_buffer):
                             snapshot = history_buffer[-(history_offset + 1)]
                             scroll_buffers = snapshot["buffers"]
                             scroll_stats = snapshot["stats"]
@@ -703,7 +713,7 @@ def main(args):
                     elif key == "arrow_down":
                         scroll_buffers = buffers
                         scroll_stats = stats
-                        if history_offset > 0 and history_offset <= len(history_buffer):
+                        if 0 < history_offset <= len(history_buffer):
                             snapshot = history_buffer[-(history_offset + 1)]
                             scroll_buffers = snapshot["buffers"]
                             scroll_stats = snapshot["stats"]
@@ -837,7 +847,7 @@ def main(args):
                     display_timestamp = format_timestamp(
                         datetime.now(timezone.utc), display_tz
                     )
-                    if history_offset > 0 and history_offset <= len(history_buffer):
+                    if 0 < history_offset <= len(history_buffer):
                         snapshot = history_buffer[-(history_offset + 1)]
                         snapshot_dt = datetime.fromtimestamp(
                             snapshot["timestamp"], timezone.utc
@@ -855,8 +865,7 @@ def main(args):
                         args.slow_threshold,
                         show_asn,
                     )
-                    if host_scroll_offset > max_offset:
-                        host_scroll_offset = max_offset
+                    host_scroll_offset = min(host_scroll_offset, max_offset)
                     override_lines = None
                     term_size = get_terminal_size(fallback=(80, 24))
                     if show_help:
@@ -971,4 +980,3 @@ def main(args):
             f"{info['alias']:30} {success}/{total} replies, {slow} slow, {fail} failed "
             f"({percentage:.1f}%) [{status}]"
         )
-

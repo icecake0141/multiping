@@ -22,6 +22,7 @@ import ipaddress
 import socket
 import sys
 from collections import deque
+from collections.abc import Sequence
 from types import SimpleNamespace
 
 import ui_render
@@ -38,57 +39,57 @@ from ui_render import (
 HISTORY_DURATION_MINUTES = 30  # Store up to 30 minutes of history
 SNAPSHOT_INTERVAL_SECONDS = 1.0  # Take snapshot every second
 MAX_HOST_THREADS = 128  # Hard cap to avoid unbounded thread growth.
+TIMELINE_LABEL_ESTIMATE_WIDTH = 15  # Estimated label column + spacing width.
+
+
+def _build_term_size(columns_value, lines_value):
+    """Build a terminal size namespace from column and line values."""
+    try:
+        columns = int(columns_value)
+        lines = int(lines_value)
+    except (ValueError, TypeError):
+        return None
+    if columns <= 0 or lines <= 0:
+        return None
+    return SimpleNamespace(columns=columns, lines=lines)
 
 
 def _normalize_term_size(term_size):
     """
     Normalize terminal size to an object with .columns and .lines attributes.
-    
-    Handles tuples, lists, dicts, and objects with columns/lines attributes.
-    
+
+    Handles tuple-like sequences, dicts, and objects with columns/lines attributes.
+
     Args:
-        term_size: Terminal size as tuple, list, dict, or object with attributes
-        
+        term_size: Terminal size as tuple-like sequence, dict, or object with attributes
+
     Returns:
         Object with .columns and .lines attributes, or None if invalid
     """
     if term_size is None:
         return None
-    
-    # Already has the right attributes
-    if hasattr(term_size, 'columns') and hasattr(term_size, 'lines'):
-        return term_size
-    
-    # Handle tuple or list (columns, lines)
-    if isinstance(term_size, (tuple, list)) and len(term_size) >= 2:
-        try:
-            return SimpleNamespace(columns=int(term_size[0]), lines=int(term_size[1]))
-        except (ValueError, TypeError, IndexError):
-            return None
-    
-    # Handle dict with 'columns' and 'lines' keys
+    if hasattr(term_size, "columns") and hasattr(term_size, "lines"):
+        return _build_term_size(term_size.columns, term_size.lines)
     if isinstance(term_size, dict):
-        if 'columns' in term_size and 'lines' in term_size:
+        return _build_term_size(term_size.get("columns"), term_size.get("lines"))
+    if isinstance(term_size, Sequence) and not isinstance(term_size, (str, bytes)):
+        if len(term_size) >= 2:
             try:
-                return SimpleNamespace(
-                    columns=int(term_size['columns']),
-                    lines=int(term_size['lines'])
-                )
-            except (ValueError, TypeError, KeyError):
+                return _build_term_size(term_size[0], term_size[1])
+            except TypeError:
                 return None
-    
     return None
 
 
 def parse_host_file_line(line, line_number, input_file):
     """
     Parse a single line from the host input file.
-    
+
     Args:
         line: Line of text from the file
         line_number: Line number in the file
         input_file: Path to the input file (for error messages)
-        
+
     Returns:
         Dict with keys 'host', 'alias', 'ip' or None if invalid/comment
     """
@@ -131,10 +132,10 @@ def parse_host_file_line(line, line_number, input_file):
 def read_input_file(input_file):
     """
     Read and parse hosts from an input file.
-    
+
     Args:
         input_file: Path to the file containing host entries
-        
+
     Returns:
         List of host info dictionaries
     """
@@ -199,31 +200,36 @@ def compute_history_page_step(
     host_labels = [entry[1] for entry in display_entries]
     if not host_labels:
         host_labels = [info["alias"] for info in host_infos]
-    
+
     # Defensively extract timeline_width from compute_main_layout result
     layout_result = compute_main_layout(
         host_labels, main_width, main_height, header_lines
     )
-    
+
     # Try different extraction methods to handle various return types
     timeline_width = None
-    
+
     # Method 1: Try tuple/list indexing (expected case)
-    try:
-        if isinstance(layout_result, (tuple, list)) and len(layout_result) > 2:
+    if isinstance(layout_result, (tuple, list)) and len(layout_result) > 2:
+        try:
             timeline_width = layout_result[2]
-    except (IndexError, TypeError):
-        pass
-    
+        except TypeError:
+            timeline_width = None
+
     # Method 2: Try attribute access (for named tuples or objects)
     if timeline_width is None:
-        timeline_width = getattr(layout_result, 'timeline_width', None)
-    
+        timeline_width = getattr(layout_result, "timeline_width", None)
+
     # Method 3: Fallback to a reasonable default based on main_width
     if timeline_width is None:
         # Estimate: main_width minus label column and spacing
-        timeline_width = max(1, main_width - 15)
-    
+        timeline_width = max(1, main_width - TIMELINE_LABEL_ESTIMATE_WIDTH)
+
+    try:
+        timeline_width = int(timeline_width)
+    except (TypeError, ValueError):
+        timeline_width = max(1, main_width - TIMELINE_LABEL_ESTIMATE_WIDTH)
+
     return max(1, timeline_width)
 
 
