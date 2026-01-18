@@ -211,7 +211,10 @@ def compute_history_page_step(
 
     # Method 1: Try tuple/list indexing (expected case)
     if isinstance(layout_result, (tuple, list)) and len(layout_result) > 2:
-        timeline_width = layout_result[2]
+        try:
+            timeline_width = layout_result[2]
+        except (IndexError, TypeError):
+            timeline_width = None
 
     # Method 2: Try attribute access (for named tuples or objects)
     if timeline_width is None:
