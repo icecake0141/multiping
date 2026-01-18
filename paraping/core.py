@@ -76,7 +76,7 @@ def _normalize_term_size(term_size):
         if len(term_size) >= 2:
             try:
                 return _build_term_size(term_size[0], term_size[1])
-            except (IndexError, TypeError):
+            except TypeError:
                 return None
     return None
 
@@ -213,7 +213,7 @@ def compute_history_page_step(
     if isinstance(layout_result, (tuple, list)) and len(layout_result) > 2:
         try:
             timeline_width = layout_result[2]
-        except (IndexError, TypeError):
+        except TypeError:
             timeline_width = None
 
     # Method 2: Try attribute access (for named tuples or objects)
