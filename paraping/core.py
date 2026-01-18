@@ -39,14 +39,19 @@ from ui_render import (
 HISTORY_DURATION_MINUTES = 30  # Store up to 30 minutes of history
 SNAPSHOT_INTERVAL_SECONDS = 1.0  # Take snapshot every second
 MAX_HOST_THREADS = 128  # Hard cap to avoid unbounded thread growth.
+TIMELINE_LABEL_ESTIMATE_WIDTH = 15
 
 
 def _build_term_size(columns_value, lines_value):
     """Build a terminal size namespace from column and line values."""
     try:
-        return SimpleNamespace(columns=int(columns_value), lines=int(lines_value))
+        columns = int(columns_value)
+        lines = int(lines_value)
     except (ValueError, TypeError):
         return None
+    if columns <= 0 or lines <= 0:
+        return None
+    return SimpleNamespace(columns=columns, lines=lines)
 
 
 def _normalize_term_size(term_size):
@@ -69,19 +74,22 @@ def _normalize_term_size(term_size):
         return _build_term_size(term_size.get("columns"), term_size.get("lines"))
     if isinstance(term_size, Sequence) and not isinstance(term_size, (str, bytes)):
         if len(term_size) >= 2:
-            return _build_term_size(term_size[0], term_size[1])
+            try:
+                return _build_term_size(term_size[0], term_size[1])
+            except (IndexError, TypeError):
+                return None
     return None
 
 
 def parse_host_file_line(line, line_number, input_file):
     """
     Parse a single line from the host input file.
-    
+
     Args:
         line: Line of text from the file
         line_number: Line number in the file
         input_file: Path to the input file (for error messages)
-        
+
     Returns:
         Dict with keys 'host', 'alias', 'ip' or None if invalid/comment
     """
@@ -124,10 +132,10 @@ def parse_host_file_line(line, line_number, input_file):
 def read_input_file(input_file):
     """
     Read and parse hosts from an input file.
-    
+
     Args:
         input_file: Path to the file containing host entries
-        
+
     Returns:
         List of host info dictionaries
     """
@@ -212,12 +220,12 @@ def compute_history_page_step(
     # Method 3: Fallback to a reasonable default based on main_width
     if timeline_width is None:
         # Estimate: main_width minus label column and spacing
-        timeline_width = max(1, main_width - 15)
+        timeline_width = max(1, main_width - TIMELINE_LABEL_ESTIMATE_WIDTH)
 
     try:
         timeline_width = int(timeline_width)
     except (TypeError, ValueError):
-        timeline_width = max(1, main_width - 15)
+        timeline_width = max(1, main_width - TIMELINE_LABEL_ESTIMATE_WIDTH)
 
     return max(1, timeline_width)
 
