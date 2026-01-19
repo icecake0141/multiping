@@ -29,8 +29,8 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from input_keys import read_key
-from network_asn import asn_worker, should_retry_asn
+from paraping.input_keys import read_key
+from paraping.network_asn import asn_worker, should_retry_asn
 from paraping.core import (
     HISTORY_DURATION_MINUTES,
     MAX_HOST_THREADS,
@@ -43,7 +43,7 @@ from paraping.core import (
     update_history_buffer,
 )
 from paraping.pinger import rdns_worker, worker_ping
-from ui_render import (
+from paraping.ui_render import (
     build_display_entries,
     build_display_lines,
     build_display_names,

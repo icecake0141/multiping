@@ -65,10 +65,10 @@ from paraping.core import (
 from paraping.pinger import ping_host, worker_ping, resolve_rdns, rdns_worker
 
 # Re-export symbols from other modules for backward compatibility
-from ping_wrapper import ping_with_helper
-from network_asn import resolve_asn, asn_worker, should_retry_asn
-from input_keys import parse_escape_sequence, read_key
-from stats import (
+from paraping.ping_wrapper import ping_with_helper
+from paraping.network_asn import resolve_asn, asn_worker, should_retry_asn
+from paraping.input_keys import parse_escape_sequence, read_key
+from paraping.stats import (
     compute_fail_streak,
     latest_ttl_value,
     latest_rtt_value,
@@ -77,7 +77,7 @@ from stats import (
     build_summary_all_suffix,
     compute_summary_data,
 )
-from ui_render import (
+from paraping.ui_render import (
     strip_ansi,
     visible_len,
     truncate_visible,

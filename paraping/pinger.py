@@ -21,7 +21,7 @@ import queue
 import socket
 import time
 
-from ping_wrapper import ping_with_helper
+from paraping.ping_wrapper import ping_with_helper
 
 
 def ping_host(

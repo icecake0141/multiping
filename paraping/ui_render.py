@@ -27,7 +27,7 @@ import time
 from collections import deque
 from datetime import datetime, timezone
 
-from stats import (
+from paraping.stats import (
     compute_fail_streak,
     latest_ttl_value,
     latest_rtt_value,

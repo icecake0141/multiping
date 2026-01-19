@@ -26,8 +26,8 @@ from collections.abc import Sequence
 from types import SimpleNamespace
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-import ui_render
-from ui_render import (
+import paraping.ui_render
+from paraping.ui_render import (
     compute_main_layout,
     should_show_asn,
     build_display_names,
@@ -215,7 +215,7 @@ def compute_history_page_step(
     header_lines=2,
 ):
     """Compute the page step for history navigation based on timeline width."""
-    term_size = ui_render.get_terminal_size(fallback=(80, 24))
+    term_size = paraping.ui_render.get_terminal_size(fallback=(80, 24))
     term_width = term_size.columns
     term_height = term_size.lines
     status_box_height = 3 if term_height >= 4 and term_width >= 2 else 1
@@ -288,7 +288,7 @@ def get_cached_page_step(
             return True  # Terminal height changed
         return False
 
-    current_term_size = ui_render.get_terminal_size(fallback=(80, 24))
+    current_term_size = paraping.ui_render.get_terminal_size(fallback=(80, 24))
 
     # Check if we need to recalculate
     if should_recalculate_page_step(cached_page_step, last_term_size, current_term_size):
