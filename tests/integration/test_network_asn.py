@@ -28,13 +28,7 @@ from unittest.mock import MagicMock, patch
 # Add parent directory to path to import network_asn
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-from paraping.network_asn import (
-    asn_worker,
-    fetch_asn_via_whois,
-    parse_asn_response,
-    resolve_asn,
-    should_retry_asn,
-)
+from paraping.network_asn import asn_worker, fetch_asn_via_whois, parse_asn_response, resolve_asn, should_retry_asn
 
 
 class TestParseASNResponse(unittest.TestCase):

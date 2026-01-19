@@ -19,29 +19,21 @@ import os
 import queue
 import sys
 import unittest
-from collections import deque
-from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
 # Add parent directory to path to import main
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 from main import (  # noqa: E402
-    compute_history_page_step,
-    create_state_snapshot,
     cycle_panel_position,
     flash_screen,
-    get_cached_page_step,
     handle_options,
     main,
     parse_escape_sequence,
-    read_key,
     render_fullscreen_rtt_graph,
-    render_help_view,
     ring_bell,
     should_flash_on_fail,
     toggle_panel_visibility,
-    update_history_buffer,
 )
 
 

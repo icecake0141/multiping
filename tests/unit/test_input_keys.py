@@ -20,7 +20,7 @@ and terminal emulators to ensure consistent behavior on Windows, Mac, and Linux.
 import os
 import sys
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 # Add parent directory to path to import input_keys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))

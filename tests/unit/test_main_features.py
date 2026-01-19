@@ -17,18 +17,12 @@ Unit tests for TTL functionality and host selection features
 import os
 import sys
 import unittest
-from collections import deque
 from unittest.mock import patch
 
 # Add parent directory to path to import main
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-from main import (  # noqa: E402
-    latest_ttl_value,
-    render_fullscreen_rtt_graph,
-    render_host_selection_view,
-    render_summary_view,
-)
+from main import latest_ttl_value, render_fullscreen_rtt_graph, render_host_selection_view, render_summary_view  # noqa: E402
 
 
 class TestTTLFunctionality(unittest.TestCase):

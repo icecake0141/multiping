@@ -20,10 +20,9 @@ This module tests pure domain logic functions without performing actual network 
 import os
 import socket
 import sys
-import time
 import unittest
 from collections import deque
-from unittest.mock import MagicMock, mock_open, patch
+from unittest.mock import mock_open, patch
 
 # Add parent directory to path to import paraping
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
@@ -33,9 +32,7 @@ from paraping.core import (
     MAX_HOST_THREADS,
     SNAPSHOT_INTERVAL_SECONDS,
     build_host_infos,
-    compute_history_page_step,
     create_state_snapshot,
-    get_cached_page_step,
     parse_host_file_line,
     read_input_file,
     resolve_render_state,

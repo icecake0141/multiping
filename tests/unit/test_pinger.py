@@ -24,17 +24,12 @@ import sys
 import threading
 import time
 import unittest
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import patch
 
 # Add parent directory to path to import paraping
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-from paraping.pinger import (
-    ping_host,
-    rdns_worker,
-    resolve_rdns,
-    worker_ping,
-)
+from paraping.pinger import ping_host, rdns_worker, resolve_rdns, worker_ping
 
 
 class TestPingHost(unittest.TestCase):

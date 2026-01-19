@@ -22,10 +22,7 @@ from unittest.mock import mock_open, patch
 # Add parent directory to path to import main
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-from main import (  # noqa: E402
-    handle_options,
-    read_input_file,
-)
+from main import handle_options, read_input_file  # noqa: E402
 
 
 class TestHandleOptions(unittest.TestCase):

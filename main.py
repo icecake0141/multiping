@@ -36,6 +36,7 @@ The main logic has been split into separate modules in the paraping/ package.
 
 # Standard library imports for test compatibility (tests patch these from main module)
 # pylint: disable=unused-import
+# isort: skip_file
 import os
 import queue
 import select
@@ -46,10 +47,11 @@ import threading
 import tty
 from concurrent.futures import ThreadPoolExecutor
 
+# pylint: enable=unused-import
+
 # Import and re-export from the refactored modules
-from paraping.cli import handle_options
+from paraping.cli import handle_options, run
 from paraping.cli import main as cli_main
-from paraping.cli import run
 from paraping.core import (
     HISTORY_DURATION_MINUTES,
     MAX_HOST_THREADS,

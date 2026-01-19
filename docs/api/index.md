@@ -30,7 +30,7 @@ Main application entry point and orchestration logic.
 #### `ping_wrapper.py`
 Python wrapper for the privileged ICMP helper binary.
 - **Purpose**: Interface between Python application and `ping_helper` C binary
-- **Key Functions**: 
+- **Key Functions**:
   - Process spawning and management
   - JSON parsing of helper output
   - Error handling and timeout management
