@@ -19,7 +19,6 @@ This module contains functions for pinging hosts and managing ping worker thread
 import os
 import queue
 import socket
-import threading
 import time
 
 from ping_wrapper import ping_with_helper
