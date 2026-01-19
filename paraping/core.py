@@ -393,7 +393,7 @@ def create_state_snapshot(buffers: Dict[int, Any], stats: Dict[int, Any], timest
 
 
 def update_history_buffer(
-    history_buffer: deque,
+    history_buffer: "deque[Dict[str, Any]]",
     buffers: Dict[int, Any],
     stats: Dict[int, Any],
     now: float,
@@ -414,7 +414,7 @@ def update_history_buffer(
 
 def resolve_render_state(
     history_offset: int,
-    history_buffer: deque,
+    history_buffer: "deque[Dict[str, Any]]",
     buffers: Dict[int, Any],
     stats: Dict[int, Any],
     paused: bool,
