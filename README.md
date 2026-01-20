@@ -295,7 +295,7 @@ make build
 sudo make setcap
 
 # Run directly from the repository
-python3 -m paraping.cli --help
+python3 -m paraping --help
 # Or use the main.py wrapper
 ./main.py --help
 ```

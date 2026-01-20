@@ -16,7 +16,7 @@ ParaPing __main__ module.
 This module enables running paraping as `python3 -m paraping`.
 """
 
-from paraping.cli import main
+from .cli import main
 
 if __name__ == "__main__":
     main()
