@@ -19,7 +19,7 @@ Welcome to the ParaPing documentation hub. This directory contains comprehensive
 ## Documentation Structure
 
 ### Setup & Environment
-- [Environment Setup](environment_setup.md) - Development environment setup instructions
+- [Environment Setup (Advanced)](environment_setup.md) - Advanced development environment setup for feature branch work using automated scripts
 
 ### Component Documentation
 - [Ping Helper](ping_helper.md) - Detailed documentation for the privileged ICMP helper binary
@@ -60,9 +60,9 @@ ParaPing is an interactive terminal-based ICMP monitor that pings multiple hosts
 
 ## Getting Started
 
-1. **Installation**: See the [main README](../README.md#installation)
-2. **Development Setup**: See [environment_setup.md](environment_setup.md)
-3. **Contributing**: Read [CONTRIBUTING.md](CONTRIBUTING.md)
+1. **Installation**: See the [main README](../README.md#installation) for user and system installation options
+2. **Development Setup**: See [CONTRIBUTING.md](CONTRIBUTING.md#development-setup) for contributor setup
+3. **Advanced/Automated Setup**: See [environment_setup.md](environment_setup.md) for feature branch automation with scripts
 4. **Understanding the Code**: Review [MODULARIZATION.md](MODULARIZATION.md)
 
 ## Documentation Conventions

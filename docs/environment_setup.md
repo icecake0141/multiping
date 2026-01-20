@@ -1,8 +1,31 @@
-# Post-Refactor Environment Setup
+<!--
+Copyright 2025 icecake0141
+SPDX-License-Identifier: Apache-2.0
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+This file was created or modified with the assistance of an AI (Large Language Model).
+Review required for correctness, security, and licensing.
+-->
+
+# Development Environment Setup (Advanced)
 
 ## Overview
 
-This document describes the environment setup process for post-refactor work on the ParaPing project. The setup script automates branch creation, dependency installation, and development tool setup.
+This document describes the **advanced development environment setup** for feature branch work on the ParaPing project. It uses the automated `scripts/setup_env.sh` script to streamline branch creation, dependency installation, and development tool setup.
+
+**For general installation instructions**, see the [main README](../README.md#installation).
+
+**For contributor setup**, see [CONTRIBUTING.md](CONTRIBUTING.md#development-setup).
+
+This guide is specifically for developers who need to:
+- Create and work on feature branches using the automated setup script
+- Set up a reproducible development environment with specific tooling
+- Follow the project's post-refactor development workflow
 
 ## Prerequisites
 
