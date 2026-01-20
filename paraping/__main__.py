@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 # Copyright 2025 icecake0141
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -11,8 +10,13 @@
 # This file was created or modified with the assistance of an AI (Large Language Model).
 # Review required for correctness, security, and licensing.
 
-# ParaPing shell wrapper - runs paraping CLI via Python module
-# This script allows installation without pip by copying to PATH
-# Security note: Uses /usr/bin/env to locate python3 from PATH
+"""
+ParaPing __main__ module.
 
-exec /usr/bin/env python3 -m paraping "$@"
+This module enables running paraping as `python3 -m paraping`.
+"""
+
+from paraping.cli import main
+
+if __name__ == "__main__":
+    main()

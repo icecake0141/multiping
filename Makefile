@@ -69,13 +69,15 @@ install-user: build-python
 	@echo "Installation complete!"
 	@echo "The 'paraping' command should now be available."
 	@echo ""
-	@if ! echo "$$PATH" | tr ':' '\n' | grep -q "^$$HOME/.local/bin$$"; then \
-		echo "WARNING: ~/.local/bin is not in your PATH."; \
-		echo "Add it to your PATH by adding this line to your ~/.bashrc or ~/.zshrc:"; \
-		echo "  export PATH=\"\$$HOME/.local/bin:\$$PATH\""; \
-		echo "Then run: source ~/.bashrc  (or restart your shell)"; \
-		echo ""; \
-	fi
+	@case ":$$PATH:" in \
+		*":$$HOME/.local/bin:"*) ;; \
+		*) echo "WARNING: ~/.local/bin is not in your PATH."; \
+		   echo "Add it to your PATH by adding this line to your ~/.bashrc or ~/.zshrc:"; \
+		   echo "  export PATH=\"\$$HOME/.local/bin:\$$PATH\""; \
+		   echo "Then run: source ~/.bashrc  (or restart your shell)"; \
+		   echo ""; \
+		   ;; \
+	esac
 
 .PHONY: install-system
 install-system: build-python
