@@ -60,27 +60,29 @@ The following priority modules have been **successfully integrated**:
 
 1. **`input_keys.py`** ✅ INTEGRATED
    - **Status**: Actively used in `cli.py` (line 43: `from paraping.input_keys import read_key`)
-   - **Coverage**: 98% (42 statements, 1 missing)
+   - **File Size**: 93 lines total
+   - **Coverage**: 98% (42 code statements, 1 missing)
    - **Tests**: `tests/unit/test_input_keys.py` exists with comprehensive tests
    - **Impact**: Keyboard handling cleanly separated from main event loop
 
 2. **rDNS Functionality** ✅ INTEGRATED (in pinger.py)
    - **Status**: `resolve_rdns()` and `rdns_worker()` implemented in `pinger.py` (lines 154-174)
-   - **Coverage**: 92% overall for pinger.py
+   - **File Size**: pinger.py is 174 lines total
+   - **Coverage**: 92% overall for pinger.py (65 code statements, 5 missing)
    - **Tests**: Covered by `tests/unit/test_pinger.py` (TestResolveRDNS, TestRDNSWorker)
    - **Impact**: rDNS resolution integrated with ping functionality
-   - **Note**: `network_rdns.py` standalone module exists but is not used (functionality duplicated in pinger.py)
+   - **Note**: `network_rdns.py` standalone module (60 lines) exists but is not used (functionality duplicated in pinger.py)
 
 3. **Core Functionality** ✅ REFACTORED
    - **Status**: Major logic moved from monolithic main.py into organized modules:
-     - `cli.py`: CLI parsing and main event loop
-     - `core.py`: State management, snapshots, terminal handling
-     - `pinger.py`: Ping and network operations
+     - `cli.py` (918 lines): CLI parsing and main event loop
+     - `core.py` (431 lines): State management, snapshots, terminal handling
+     - `pinger.py` (174 lines): Ping and network operations
    - **Impact**: Original monolithic main.py converted to compatibility shim
 
 ### ⚠️ Remaining Module Integration Opportunities
 
-1. **`history.py`** (55 lines, 0% coverage)
+1. **`history.py`** (259 lines, 0% coverage)
    - **Status**: Module exists but functionality is duplicated in `core.py`
    - **Current State**: Constants like `HISTORY_DURATION_MINUTES` defined in both files
    - **Recommendation**: Either:
@@ -88,7 +90,7 @@ The following priority modules have been **successfully integrated**:
      - OR Remove `history.py` since core.py already implements this functionality
    - **Impact**: Minimal - mostly consolidation to reduce duplication
 
-2. **`network_rdns.py`** (19 lines, 0% coverage)
+2. **`network_rdns.py`** (60 lines, 0% coverage)
    - **Status**: Module exists but functionality implemented in `pinger.py` instead
    - **Current State**: `pinger.py` has its own `resolve_rdns()` and `rdns_worker()` functions
    - **Recommendation**: Either:
