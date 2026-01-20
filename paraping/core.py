@@ -160,10 +160,10 @@ def parse_host_file_line(line: str, line_number: int, input_file: str) -> Option
         return None
     if ip_obj.version != 4:
         print(
-            f"Warning: Unsupported IP version at {input_file}:{line_number}: '{ip_text}'.",
+            f"Warning: IPv6 address at {input_file}:{line_number}: '{ip_text}'. "
+            "IPv6 is not supported by ping_helper; this entry will likely fail during ping.",
             file=sys.stderr,
         )
-        return None
     return {"host": ip_text, "alias": alias, "ip": ip_text}
 
 
@@ -318,7 +318,33 @@ def build_host_infos(hosts: List[Union[str, Dict[str, str]]]) -> Tuple[List[Dict
             ip_address = entry.get("ip")
         if not ip_address:
             try:
-                ip_address = socket.gethostbyname(host)
+                # Use getaddrinfo to get all available addresses (IPv4 and IPv6)
+                # Prefer IPv4 addresses when both are available
+                addr_info = socket.getaddrinfo(host, None, socket.AF_UNSPEC, socket.SOCK_RAW)
+                
+                # Extract addresses by family
+                # getaddrinfo returns tuples: (family, type, proto, canonname, sockaddr)
+                # sockaddr for IPv4 is (address, port), for IPv6 is (address, port, flow, scope)
+                ipv4_addresses = []
+                ipv6_addresses = []
+                for family, _socktype, _proto, _canonname, sockaddr in addr_info:
+                    if family == socket.AF_INET:
+                        ipv4_addresses.append(sockaddr[0])  # sockaddr[0] is the IP address
+                    elif family == socket.AF_INET6:
+                        ipv6_addresses.append(sockaddr[0])  # sockaddr[0] is the IP address
+                
+                # Prefer IPv4 over IPv6
+                if ipv4_addresses:
+                    ip_address = ipv4_addresses[0]
+                elif ipv6_addresses:
+                    ip_address = ipv6_addresses[0]
+                    print(
+                        f"Warning: Host '{host}' resolved to IPv6 address '{ip_address}'. "
+                        "IPv6 is not supported by ping_helper; pinging will likely fail.",
+                        file=sys.stderr,
+                    )
+                else:
+                    ip_address = host
             except (socket.gaierror, OSError):
                 ip_address = host
         info = {
