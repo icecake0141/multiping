@@ -18,6 +18,8 @@ Review required for correctness, security, and licensing.
 **Status**: Active - Reflects Completed Refactoring
 **Related**: Original Issue #94 (Follow-up to PR #93)
 
+> **Note**: Line counts, coverage percentages, and line number references in this document reflect the state of the codebase as of the "Last Updated" date. As the codebase evolves, these specific numbers may become outdated. Refer to actual coverage reports (`pytest --cov`) for current statistics.
+
 ## Overview
 
 This document provides guidance on the modularization of ParaPing, documenting the completed separation of concerns from the original monolithic `main.py` into a well-organized package structure (`paraping/`) with dedicated modules having clear responsibilities and ownership boundaries.
