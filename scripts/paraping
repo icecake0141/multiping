@@ -13,5 +13,6 @@
 
 # ParaPing shell wrapper - runs paraping CLI via Python module
 # This script allows installation without pip by copying to PATH
+# Security note: Uses /usr/bin/env to locate python3 from PATH
 
-exec python3 -m paraping.cli "$@"
+exec /usr/bin/env python3 -m paraping.cli "$@"

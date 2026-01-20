@@ -55,7 +55,10 @@ native:
 .PHONY: build-python
 build-python:
 	@echo "Building Python wheel..."
-	python3 -m pip install --upgrade build
+	@if ! python3 -c "import build" 2>/dev/null; then \
+		echo "Installing python build package..."; \
+		python3 -m pip install --user --upgrade build; \
+	fi
 	python3 -m build
 
 .PHONY: install-user
@@ -66,7 +69,7 @@ install-user: build-python
 	@echo "Installation complete!"
 	@echo "The 'paraping' command should now be available."
 	@echo ""
-	@if ! echo "$$PATH" | grep -q "$$HOME/.local/bin"; then \
+	@if ! echo "$$PATH" | tr ':' '\n' | grep -q "^$$HOME/.local/bin$$"; then \
 		echo "WARNING: ~/.local/bin is not in your PATH."; \
 		echo "Add it to your PATH by adding this line to your ~/.bashrc or ~/.zshrc:"; \
 		echo "  export PATH=\"\$$HOME/.local/bin:\$$PATH\""; \
