@@ -80,7 +80,11 @@ def build_summary_suffix(entry, summary_mode):
         return f": ttl {latest_ttl}" if latest_ttl is not None else ": ttl n/a"
     if summary_mode == "streak":
         return f": streak {build_streak_label(entry)}"
-    return f": ok {entry['success_rate']:.1f}% loss {entry['loss_rate']:.1f}%"
+    # Default mode is 'rates' - show Snt/Rcv/Los and loss percentage
+    sent = entry.get('sent', 0)
+    received = entry.get('received', 0)
+    lost = entry.get('lost', 0)
+    return f": {sent}/{received}/{lost} loss {entry['loss_rate']:.1f}%"
 
 
 def build_summary_all_suffix(entry):
@@ -99,8 +103,11 @@ def build_summary_all_suffix(entry):
     latest_ttl = entry.get("latest_ttl")
     ttl_value = f"{latest_ttl}" if latest_ttl is not None else "n/a"
     streak_label = build_streak_label(entry)
+    sent = entry.get('sent', 0)
+    received = entry.get('received', 0)
+    lost = entry.get('lost', 0)
     parts = [
-        f"ok {entry['success_rate']:.1f}% loss {entry['loss_rate']:.1f}%",
+        f"{sent}/{received}/{lost} loss {entry['loss_rate']:.1f}%",
         f"avg rtt {avg_rtt}",
         f"jitter {jitter}",
         f"stddev {stddev}",
@@ -183,6 +190,9 @@ def compute_summary_data(
         summary.append(
             {
                 "host": display_name,
+                "sent": total,
+                "received": success,
+                "lost": fail,
                 "success_rate": success_rate,
                 "loss_rate": loss_rate,
                 "streak_type": streak_type,
