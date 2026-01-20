@@ -322,9 +322,16 @@ def build_host_infos(hosts: List[Union[str, Dict[str, str]]]) -> Tuple[List[Dict
                 # Prefer IPv4 addresses when both are available
                 addr_info = socket.getaddrinfo(host, None, socket.AF_UNSPEC, socket.SOCK_RAW)
                 
-                # Separate IPv4 and IPv6 addresses
-                ipv4_addresses = [info[4][0] for info in addr_info if info[0] == socket.AF_INET]
-                ipv6_addresses = [info[4][0] for info in addr_info if info[0] == socket.AF_INET6]
+                # Extract addresses by family
+                # getaddrinfo returns tuples: (family, type, proto, canonname, sockaddr)
+                # sockaddr for IPv4 is (address, port), for IPv6 is (address, port, flow, scope)
+                ipv4_addresses = []
+                ipv6_addresses = []
+                for family, _socktype, _proto, _canonname, sockaddr in addr_info:
+                    if family == socket.AF_INET:
+                        ipv4_addresses.append(sockaddr[0])  # sockaddr[0] is the IP address
+                    elif family == socket.AF_INET6:
+                        ipv6_addresses.append(sockaddr[0])  # sockaddr[0] is the IP address
                 
                 # Prefer IPv4 over IPv6
                 if ipv4_addresses:
