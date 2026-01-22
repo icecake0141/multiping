@@ -21,18 +21,15 @@ in environments like VSCode→WSL2, SSH with delays, etc.
 import os
 import sys
 import unittest
-from unittest.mock import patch, MagicMock
-from io import BytesIO
+from unittest.mock import patch
 
 # Add parent directory to path to import escape_buffering
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 from paraping.escape_buffering import (
+    ESC,
     looks_like_complete_sequence,
     read_sequence_after_esc,
-    ESC,
-    T_GAP_SECONDS,
-    T_TOTAL_SECONDS,
 )
 
 
@@ -122,15 +119,15 @@ class TestReadSequenceAfterEsc(unittest.TestCase):
         # Called at: start, while loop check, ts_m recording, end
         mock_monotonic.return_value = 0.001
         mock_time.return_value = 1000.0
-        
+
         # First select returns data available
         mock_select.return_value = ([0], [], [])
-        
+
         # Read returns the rest of the sequence
         mock_read.return_value = b"[A"
-        
+
         result, meta = read_sequence_after_esc(ESC, 0)
-        
+
         self.assertEqual(result, b"\x1b[A")
         self.assertIn("per_byte", meta)
         self.assertEqual(len(meta["per_byte"]), 3)  # ESC, [, A
@@ -145,18 +142,18 @@ class TestReadSequenceAfterEsc(unittest.TestCase):
         time_values = [0.0, 0.001, 0.002, 0.003, 0.004]
         mock_monotonic.side_effect = time_values + [time_values[-1]] * 10  # Extra values
         mock_time.side_effect = [1000.0, 1000.001, 1000.002] + [1000.003] * 10
-        
+
         # Select returns data twice (two chunks)
         mock_select.side_effect = [
             ([0], [], []),  # First chunk available
             ([0], [], []),  # Second chunk available (complete)
         ]
-        
+
         # Read returns bytes in two chunks
         mock_read.side_effect = [b"[", b"A"]
-        
+
         result, meta = read_sequence_after_esc(ESC, 0)
-        
+
         self.assertEqual(result, b"\x1b[A")
         self.assertEqual(len(meta["per_byte"]), 3)
 
@@ -170,17 +167,17 @@ class TestReadSequenceAfterEsc(unittest.TestCase):
         time_values = [0.0, 0.001, 0.002, 0.003]
         mock_monotonic.side_effect = time_values + [time_values[-1]] * 10
         mock_time.side_effect = [1000.0, 1000.001, 1000.002] + [1000.003] * 10
-        
+
         # Select returns data twice
         mock_select.side_effect = [
             ([0], [], []),  # First chunk
             ([0], [], []),  # Second chunk (complete)
         ]
-        
+
         mock_read.side_effect = [b"[", b"B"]
-        
+
         result, meta = read_sequence_after_esc(ESC, 0)
-        
+
         self.assertEqual(result, b"\x1b[B")
 
     @patch("paraping.escape_buffering.select.select")
@@ -193,17 +190,17 @@ class TestReadSequenceAfterEsc(unittest.TestCase):
         time_values = [0.0, 0.001, 0.002]
         mock_monotonic.side_effect = time_values + [time_values[-1]] * 10
         mock_time.side_effect = [1000.0, 1000.001] + [1000.002] * 10
-        
+
         # Select returns data once, then timeout
         mock_select.side_effect = [
             ([0], [], []),  # First chunk (complete)
-            ([], [], []),   # Timeout (no more data)
+            ([], [], []),  # Timeout (no more data)
         ]
-        
+
         mock_read.return_value = b"[C"
-        
+
         result, meta = read_sequence_after_esc(ESC, 0)
-        
+
         self.assertEqual(result, b"\x1b[C")
 
     @patch("paraping.escape_buffering.select.select")
@@ -216,12 +213,12 @@ class TestReadSequenceAfterEsc(unittest.TestCase):
         # The function will keep calling monotonic() in the while loop condition
         mock_monotonic.return_value = 0.6  # Always return value exceeding T_TOTAL
         mock_time.return_value = 1000.0
-        
+
         # No data arrives within time limit
         mock_select.return_value = ([], [], [])
-        
+
         result, meta = read_sequence_after_esc(ESC, 0)
-        
+
         # Should return just ESC since no additional bytes arrived in time
         self.assertEqual(result, b"\x1b")
         # The elapsed time in meta may be larger than T_TOTAL due to our mock
@@ -236,15 +233,15 @@ class TestReadSequenceAfterEsc(unittest.TestCase):
         # Mock time progression
         mock_monotonic.return_value = 0.001
         mock_time.return_value = 1000.0
-        
+
         # Select returns data once
         mock_select.return_value = ([0], [], [])
-        
+
         # Read returns complete sequence in one chunk
         mock_read.return_value = b"[D"
-        
+
         result, meta = read_sequence_after_esc(ESC, 0)
-        
+
         self.assertEqual(result, b"\x1b[D")
         # Should exit early, not wait full T_GAP or T_TOTAL
         self.assertLess(meta["elapsed"], 0.1)
@@ -257,12 +254,12 @@ class TestReadSequenceAfterEsc(unittest.TestCase):
         """Test graceful handling of OSError during read."""
         mock_monotonic.side_effect = [0.0, 0.01, 0.02]
         mock_time.return_value = 1000.0
-        
+
         mock_select.return_value = ([0], [], [])
         mock_read.side_effect = OSError("Test error")
-        
+
         result, meta = read_sequence_after_esc(ESC, 0)
-        
+
         # Should return just ESC when read fails
         self.assertEqual(result, b"\x1b")
 
@@ -274,12 +271,12 @@ class TestReadSequenceAfterEsc(unittest.TestCase):
         """Test handling of EOF (empty read) during buffering."""
         mock_monotonic.side_effect = [0.0, 0.01, 0.02]
         mock_time.return_value = 1000.0
-        
+
         mock_select.return_value = ([0], [], [])
         mock_read.return_value = b""  # EOF
-        
+
         result, meta = read_sequence_after_esc(ESC, 0)
-        
+
         # Should return just ESC when EOF encountered
         self.assertEqual(result, b"\x1b")
 
@@ -291,13 +288,14 @@ class TestReadSequenceAfterEsc(unittest.TestCase):
         """Test buffering complex sequence like Ctrl+Arrow with multiple bytes."""
         # Mock time progression - use return_value for simplicity
         time_counter = [0.0]
+
         def mock_monotonic_fn():
             time_counter[0] += 0.001
             return time_counter[0]
-        
+
         mock_monotonic.side_effect = mock_monotonic_fn
         mock_time.return_value = 1000.0
-        
+
         # Select returns data multiple times
         mock_select.side_effect = [
             ([0], [], []),  # [
@@ -306,12 +304,12 @@ class TestReadSequenceAfterEsc(unittest.TestCase):
             ([0], [], []),  # 5
             ([0], [], []),  # A (complete, should exit)
         ]
-        
+
         # Read returns bytes one at a time (worst case)
         mock_read.side_effect = [b"[", b"1", b";", b"5", b"A"]
-        
+
         result, meta = read_sequence_after_esc(ESC, 0)
-        
+
         self.assertEqual(result, b"\x1b[1;5A")  # Ctrl+Up
         self.assertEqual(len(meta["per_byte"]), 6)  # ESC + 5 more bytes
 
@@ -323,32 +321,33 @@ class TestReadSequenceAfterEsc(unittest.TestCase):
         """Test that metadata has correct structure and values."""
         start_time_m = 100.0
         start_time_utc = 2000.0
-        
+
         time_counter = [start_time_m]
+
         def mock_monotonic_fn():
             val = time_counter[0]
             time_counter[0] += 0.001
             return val
-        
+
         mock_monotonic.side_effect = mock_monotonic_fn
         mock_time.return_value = start_time_utc
-        
+
         mock_select.return_value = ([0], [], [])
         mock_read.return_value = b"[A"
-        
+
         result, meta = read_sequence_after_esc(ESC, 0)
-        
+
         # Check metadata structure
         self.assertIn("start_monotonic", meta)
         self.assertIn("end_monotonic", meta)
         self.assertIn("elapsed", meta)
         self.assertIn("per_byte", meta)
-        
+
         # Check metadata values
         self.assertEqual(meta["start_monotonic"], start_time_m)
         self.assertGreater(meta["end_monotonic"], meta["start_monotonic"])
         self.assertGreater(meta["elapsed"], 0)
-        
+
         # Check per_byte structure (each entry is tuple of hex, ts_m, ts_utc)
         self.assertIsInstance(meta["per_byte"], list)
         self.assertGreater(len(meta["per_byte"]), 0)
