@@ -321,7 +321,8 @@ class TestSummaryData(unittest.TestCase):
             self.assertEqual(len(line), width)
 
         # The host info line should contain essential info when width is sufficient
-        host_line = lines[2]  # First line is "Summary", second is separator
+        # Line 0: "Summary (Rates)", Line 1: separator, Line 2: legend, Line 3: first host
+        host_line = lines[3]  # First line is "Summary", second is separator, third is legend
         self.assertIn("10/10/0", host_line)
         self.assertIn("%", host_line)
 
@@ -427,6 +428,73 @@ class TestSummaryData(unittest.TestCase):
         self.assertNotIn("ttl 64", combined)
         self.assertNotIn("streak", combined)
 
+    def test_render_summary_view_includes_legend_for_rates_mode(self):
+        """Test that summary view includes Snt/Rcv/Los legend in rates mode"""
+        summary_data = [
+            {
+                "host": "example.com",
+                "sent": 10,
+                "received": 9,
+                "lost": 1,
+                "success_rate": 90.0,
+                "loss_rate": 10.0,
+                "streak_type": "fail",
+                "streak_length": 1,
+                "avg_rtt_ms": 25.0,
+                "jitter_ms": 2.5,
+                "stddev_ms": 3.2,
+            }
+        ]
+
+        width = 60
+        height = 10
+        lines = render_summary_view(summary_data, width, height, "rates")
+
+        # Check that legend is present
+        legend_found = False
+        for line in lines:
+            if "Snt/Rcv/Los" in line and "Sent/Received/Lost" in line:
+                legend_found = True
+                break
+        self.assertTrue(legend_found, "Legend for Snt/Rcv/Los should be present in rates mode")
+
+    def test_render_summary_view_no_legend_for_other_modes(self):
+        """Test that summary view does not include Snt/Rcv/Los legend in non-rates modes"""
+        summary_data = [
+            {
+                "host": "example.com",
+                "sent": 10,
+                "received": 9,
+                "lost": 1,
+                "success_rate": 90.0,
+                "loss_rate": 10.0,
+                "streak_type": "fail",
+                "streak_length": 1,
+                "avg_rtt_ms": 25.0,
+                "jitter_ms": 2.5,
+                "stddev_ms": 3.2,
+                "latest_ttl": 64,
+            }
+        ]
+
+        width = 60
+        height = 10
+
+        # Test RTT mode
+        lines_rtt = render_summary_view(summary_data, width, height, "rtt")
+        legend_in_rtt = any("Snt/Rcv/Los" in line for line in lines_rtt)
+        self.assertFalse(legend_in_rtt, "Legend should not be present in rtt mode")
+
+        # Test TTL mode
+        lines_ttl = render_summary_view(summary_data, width, height, "ttl")
+        legend_in_ttl = any("Snt/Rcv/Los" in line for line in lines_ttl)
+        self.assertFalse(legend_in_ttl, "Legend should not be present in ttl mode")
+
+        # Test streak mode
+        lines_streak = render_summary_view(summary_data, width, height, "streak")
+        legend_in_streak = any("Snt/Rcv/Los" in line for line in lines_streak)
+        self.assertFalse(legend_in_streak, "Legend should not be present in streak mode")
+
 
 class TestTimezoneFormatting(unittest.TestCase):
     """Test timezone handling functions"""
@@ -461,9 +529,7 @@ class TestHostInfoBuilding(unittest.TestCase):
     @patch("paraping.core.socket.getaddrinfo")
     def test_build_host_infos_with_hostname(self, mock_getaddrinfo):
         """Test building host infos with resolvable hostname"""
-        mock_getaddrinfo.return_value = [
-            (socket.AF_INET, socket.SOCK_RAW, 0, '', ('93.184.216.34', 0))
-        ]
+        mock_getaddrinfo.return_value = [(socket.AF_INET, socket.SOCK_RAW, 0, "", ("93.184.216.34", 0))]
 
         host_infos, host_map = build_host_infos(["example.com"])
 
@@ -487,9 +553,9 @@ class TestHostInfoBuilding(unittest.TestCase):
     def test_build_host_infos_multiple_hosts(self, mock_getaddrinfo):
         """Test building host infos with multiple hosts"""
         mock_getaddrinfo.side_effect = [
-            [(socket.AF_INET, socket.SOCK_RAW, 0, '', ('1.1.1.1', 0))],
-            [(socket.AF_INET, socket.SOCK_RAW, 0, '', ('2.2.2.2', 0))],
-            [(socket.AF_INET, socket.SOCK_RAW, 0, '', ('3.3.3.3', 0))],
+            [(socket.AF_INET, socket.SOCK_RAW, 0, "", ("1.1.1.1", 0))],
+            [(socket.AF_INET, socket.SOCK_RAW, 0, "", ("2.2.2.2", 0))],
+            [(socket.AF_INET, socket.SOCK_RAW, 0, "", ("3.3.3.3", 0))],
         ]
 
         host_infos, host_map = build_host_infos(["h1.com", "h2.com", "h3.com"])
