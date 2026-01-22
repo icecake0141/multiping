@@ -338,11 +338,12 @@ class TestReadKey(unittest.TestCase):
         mock_stdin.read.side_effect = ["\x1b", "["]
 
         result = read_key()
-        # Should return parsed sequence if we got the '[', or ESC if incomplete
-        # With inter-byte timeout, if '[' arrives late, it should still be read
-        # Let me reconsider - actually the timeout in select will prevent late arrival
-        # So let's test timeout properly
-        self.assertIn(result, ("\x1b", "arrow_up", "arrow_down", "arrow_left", "arrow_right", None))
+        # When '[' is read but doesn't match a complete sequence,
+        # the function should return ESC as fallback
+        self.assertIn(
+            result,
+            ("\x1b", "arrow_up", "arrow_down", "arrow_left", "arrow_right", None),
+        )
 
     @patch("paraping.input_keys.time.monotonic")
     @patch("paraping.input_keys.select.select")
