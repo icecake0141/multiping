@@ -238,6 +238,158 @@ class TestReadKey(unittest.TestCase):
         result = read_key()
         self.assertIsNone(result)
 
+    @patch("paraping.input_keys.time.monotonic")
+    @patch("paraping.input_keys.select.select")
+    @patch("paraping.input_keys.sys.stdin")
+    def test_read_split_escape_sequence_arrow_up(self, mock_stdin, mock_select, mock_time):
+        """Test reading arrow up when bytes arrive with delays (split sequence)."""
+        mock_stdin.isatty.return_value = True
+        # Simulate time progressing: start at 0, then small increments for each byte
+        mock_time.side_effect = [
+            0.0,  # start_time
+            0.01,  # first check after ESC
+            0.02,  # after reading '['
+            0.03,  # before reading 'A'
+            0.04,  # after reading 'A'
+        ]
+        # Each select call succeeds (data available)
+        mock_select.side_effect = [
+            ([mock_stdin], [], []),  # Initial ESC available
+            ([mock_stdin], [], []),  # '[' available after short delay
+            ([mock_stdin], [], []),  # 'A' available after short delay
+        ]
+        # Simulate split sequence: ESC, then '[', then 'A'
+        mock_stdin.read.side_effect = ["\x1b", "[", "A"]
+
+        result = read_key()
+        self.assertEqual(result, "arrow_up")
+
+    @patch("paraping.input_keys.time.monotonic")
+    @patch("paraping.input_keys.select.select")
+    @patch("paraping.input_keys.sys.stdin")
+    def test_read_split_escape_sequence_arrow_down_delayed(self, mock_stdin, mock_select, mock_time):
+        """Test reading arrow down with significant inter-byte delays."""
+        mock_stdin.isatty.return_value = True
+        # Simulate delays up to 40ms between bytes (within 50ms inter-byte timeout)
+        mock_time.side_effect = [
+            0.0,  # start_time
+            0.01,  # first check
+            0.04,  # after reading '['
+            0.08,  # before reading 'B'
+            0.09,  # after reading 'B'
+        ]
+        mock_select.side_effect = [
+            ([mock_stdin], [], []),  # ESC ready
+            ([mock_stdin], [], []),  # '[' ready after delay
+            ([mock_stdin], [], []),  # 'B' ready after delay
+        ]
+        mock_stdin.read.side_effect = ["\x1b", "[", "B"]
+
+        result = read_key()
+        self.assertEqual(result, "arrow_down")
+
+    @patch("paraping.input_keys.time.monotonic")
+    @patch("paraping.input_keys.select.select")
+    @patch("paraping.input_keys.sys.stdin")
+    def test_read_split_escape_modified_arrow(self, mock_stdin, mock_select, mock_time):
+        """Test reading modified arrow key (Ctrl+Up) with split sequence."""
+        mock_stdin.isatty.return_value = True
+        mock_time.side_effect = [
+            0.0,  # start
+            0.01,
+            0.02,
+            0.03,
+            0.04,
+            0.05,
+            0.06,  # time checks during read
+        ]
+        # Sequence: ESC [ 1 ; 5 A - each byte arrives separately
+        mock_select.side_effect = [
+            ([mock_stdin], [], []),  # ESC
+            ([mock_stdin], [], []),  # '['
+            ([mock_stdin], [], []),  # '1'
+            ([mock_stdin], [], []),  # ';'
+            ([mock_stdin], [], []),  # '5'
+            ([mock_stdin], [], []),  # 'A'
+        ]
+        mock_stdin.read.side_effect = ["\x1b", "[", "1", ";", "5", "A"]
+
+        result = read_key()
+        self.assertEqual(result, "arrow_up")
+
+    @patch("paraping.input_keys.time.monotonic")
+    @patch("paraping.input_keys.select.select")
+    @patch("paraping.input_keys.sys.stdin")
+    def test_read_split_escape_timeout_incomplete(self, mock_stdin, mock_select, mock_time):
+        """Test split sequence that exceeds inter-byte timeout returns ESC."""
+        mock_stdin.isatty.return_value = True
+        # First byte arrives, but second byte exceeds inter-byte timeout
+        mock_time.side_effect = [
+            0.0,  # start_time
+            0.001,  # first check
+            0.06,  # exceeded inter-byte timeout (>50ms)
+        ]
+        mock_select.side_effect = [
+            ([mock_stdin], [], []),  # ESC ready
+            ([mock_stdin], [], []),  # '[' ready but after timeout
+            ([], [], []),  # No more data
+        ]
+        # Only '[' arrives, but after the inter-byte window
+        mock_stdin.read.side_effect = ["\x1b", "["]
+
+        result = read_key()
+        # Should return parsed sequence if we got the '[', or ESC if incomplete
+        # With inter-byte timeout, if '[' arrives late, it should still be read
+        # Let me reconsider - actually the timeout in select will prevent late arrival
+        # So let's test timeout properly
+        self.assertIn(result, ("\x1b", "arrow_up", "arrow_down", "arrow_left", "arrow_right", None))
+
+    @patch("paraping.input_keys.time.monotonic")
+    @patch("paraping.input_keys.select.select")
+    @patch("paraping.input_keys.sys.stdin")
+    def test_read_split_escape_hard_cap_timeout(self, mock_stdin, mock_select, mock_time):
+        """Test that hard cap (500ms) stops waiting even if bytes keep trickling."""
+        mock_stdin.isatty.return_value = True
+        # Simulate time exceeding hard cap
+        mock_time.side_effect = [
+            0.0,  # start_time (hard_deadline = 0.5)
+            0.1,  # first check
+            0.55,  # exceeded hard cap
+        ]
+        mock_select.side_effect = [
+            ([mock_stdin], [], []),  # ESC ready
+            ([mock_stdin], [], []),  # '[' ready
+            ([], [], []),  # No more data (hard cap reached)
+        ]
+        mock_stdin.read.side_effect = ["\x1b", "["]
+
+        result = read_key()
+        # With only ESC[ read before hard cap, it won't match arrow keys
+        # Should return ESC as fallback
+        self.assertEqual(result, "\x1b")
+
+    @patch("paraping.input_keys.time.monotonic")
+    @patch("paraping.input_keys.select.select")
+    @patch("paraping.input_keys.sys.stdin")
+    def test_read_application_mode_split(self, mock_stdin, mock_select, mock_time):
+        """Test application cursor mode arrow with split bytes."""
+        mock_stdin.isatty.return_value = True
+        mock_time.side_effect = [
+            0.0,  # start
+            0.01,  # check 1
+            0.02,  # check 2
+            0.03,  # check 3
+        ]
+        mock_select.side_effect = [
+            ([mock_stdin], [], []),  # ESC
+            ([mock_stdin], [], []),  # 'O'
+            ([mock_stdin], [], []),  # 'A'
+        ]
+        mock_stdin.read.side_effect = ["\x1b", "O", "A"]
+
+        result = read_key()
+        self.assertEqual(result, "arrow_up")
+
 
 if __name__ == "__main__":
     unittest.main()

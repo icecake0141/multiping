@@ -22,10 +22,12 @@ import select
 import sys
 import time
 
-# Constants for arrow key reading
-# Increased from 0.05 to 0.1 seconds to handle slow terminals/remote connections
-# where escape sequence bytes may arrive with delays (e.g., SSH, RDP, VMs)
-ARROW_KEY_READ_TIMEOUT = 0.1  # Timeout for reading arrow key escape sequences
+# Constants for robust escape sequence buffering
+# Inter-byte wait: time to wait for next byte after receiving a byte
+# Hard cap: maximum total time to wait for complete escape sequence
+# These values handle fragmented sequences from SSH, WSL2, and similar environments
+INTER_BYTE_TIMEOUT = 0.05  # 50ms between bytes
+ESCAPE_SEQUENCE_HARD_CAP = 0.5  # 500ms maximum total wait
 
 
 def parse_escape_sequence(seq):
@@ -64,6 +66,10 @@ def read_key():
     """
     Read a key from stdin, handling multi-byte sequences like arrow keys.
 
+    Implements robust buffering for escape sequences that may arrive fragmented,
+    especially in SSH, WSL2, and similar environments. Uses inter-byte timing
+    to detect complete sequences while maintaining low latency.
+
     Returns special strings for arrow keys: 'arrow_left', 'arrow_right',
     'arrow_up', 'arrow_down'. Returns the character for normal keys,
     or None if no input is available.
@@ -77,17 +83,38 @@ def read_key():
     # Check for escape sequence (arrow keys start with ESC)
     if char == "\x1b":
         seq = ""
-        deadline = time.monotonic() + ARROW_KEY_READ_TIMEOUT
-        while time.monotonic() < deadline:
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
+        start_time = time.monotonic()
+        hard_deadline = start_time + ESCAPE_SEQUENCE_HARD_CAP
+
+        # Keep reading bytes while they arrive within inter-byte timeout
+        # or until hard cap is reached
+        while True:
+            now = time.monotonic()
+            if now >= hard_deadline:
+                # Hard cap reached, stop waiting
                 break
-            ready, _, _ = select.select([sys.stdin], [], [], remaining)
+
+            # Calculate timeout: inter-byte wait, but don't exceed hard cap
+            timeout = min(INTER_BYTE_TIMEOUT, hard_deadline - now)
+            if timeout <= 0:
+                break
+
+            ready, _, _ = select.select([sys.stdin], [], [], timeout)
             if not ready:
+                # No more bytes within inter-byte timeout, sequence complete
                 break
-            seq += sys.stdin.read(1)
+
+            # Read next byte
+            next_byte = sys.stdin.read(1)
+            seq += next_byte
+
+            # Common optimization: if we see a terminal character for arrow keys,
+            # we can return early without waiting for more bytes
             if seq and seq[-1] in ("A", "B", "C", "D"):
-                break
+                # Check if this looks like a complete arrow key sequence
+                if len(seq) >= 2 and seq[0] in ("[", "O"):
+                    break
+
         parsed = parse_escape_sequence(seq)
         return parsed if parsed is not None else char
     return char
