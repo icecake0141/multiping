@@ -828,7 +828,9 @@ def render_summary_view(
     lines = [f"Summary ({mode_label})", "-" * render_width]
 
     # Add legend for Rates mode explaining Snt/Rcv/Los
-    if (summary_mode == "rates" and not allow_all) or (allow_all and summary_data):
+    # Show legend when displaying rates mode (standalone) or all mode (which includes rates)
+    show_legend = (summary_mode == "rates" and not allow_all) or allow_all
+    if show_legend and summary_data:
         legend = "Snt/Rcv/Los: Sent/Received/Lost packets"
         if len(legend) <= render_width:
             lines.append(legend)
