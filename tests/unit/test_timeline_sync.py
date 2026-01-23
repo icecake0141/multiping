@@ -70,7 +70,7 @@ def test_pending_then_success_updates_slot():
         buffers[0]["ttl_history"][-1] = success.get("ttl")
         try:
             buffers[0]["categories"]["pending"].pop()
-        except Exception:
+        except IndexError:
             pass
         buffers[0]["categories"]["success"].append(success["sequence"])
 

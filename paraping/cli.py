@@ -775,7 +775,7 @@ def run(args):
                         # Move sequence from pending category to concrete status category if possible
                         try:
                             buffers[host_id]["categories"]["pending"].pop()
-                        except Exception:
+                        except IndexError:
                             pass
                         host_buf["categories"][status].append(result["sequence"])
                     else:
