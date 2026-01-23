@@ -69,9 +69,9 @@ def test_pending_then_success_updates_slot():
         buffers[0]["time_history"][-1] = time.time()
         buffers[0]["ttl_history"][-1] = success.get("ttl")
         try:
-            pending_seq = buffers[0]["categories"]["pending"].pop()
+            buffers[0]["categories"]["pending"].pop()
         except Exception:
-            pending_seq = None
+            pass
         buffers[0]["categories"]["success"].append(success["sequence"])
 
         stats[0]["success"] += 1

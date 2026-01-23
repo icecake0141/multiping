@@ -774,9 +774,9 @@ def run(args):
                         host_buf["ttl_history"][-1] = result.get("ttl")
                         # Move sequence from pending category to concrete status category if possible
                         try:
-                            pending_seq = host_buf["categories"]["pending"].pop()
+                            buffers[host_id]["categories"]["pending"].pop()
                         except Exception:
-                            pending_seq = None
+                            pass
                         host_buf["categories"][status].append(result["sequence"])
                     else:
                         # No pending slot to finalize — append as before
