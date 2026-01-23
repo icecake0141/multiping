@@ -121,10 +121,6 @@ format: $(VENV)
 # Build Targets (cross-platform)
 # ==============================================================================
 
-# ==============================================================================
-# Build Targets (cross-platform)
-# ==============================================================================
-
 # Build the ICMP helper
 .PHONY: build
 build: $(TARGET)
@@ -151,10 +147,6 @@ setcap: $(TARGET)
 	sudo setcap cap_net_raw+ep $(TARGET)
 	@echo "Capabilities set successfully:"
 	@getcap $(TARGET)
-
-# ==============================================================================
-# Installation Targets (alternative to virtual environment)
-# ==============================================================================
 
 # ==============================================================================
 # Cleanup Targets
