@@ -39,7 +39,7 @@ classifiers = [
     "Topic :: System :: Networking :: Monitoring",
 ]
 
-# External dependencies
+# Runtime dependencies
 dependencies = [
     "readchar>=4.2.1",
 ]

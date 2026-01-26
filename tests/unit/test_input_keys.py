@@ -158,7 +158,7 @@ class TestReadKey(unittest.TestCase):
         mock_readkey.return_value = "\x1bOA"
 
         result = read_key()
-        # Our _map_readchar_key should parse this correctly
+        # Application cursor mode sequences should be parsed as arrow keys
         self.assertEqual(result, "arrow_up")
 
     @patch("paraping.input_keys.readchar.readkey")
@@ -172,7 +172,7 @@ class TestReadKey(unittest.TestCase):
         mock_readkey.return_value = "\x1b[1;5A"
 
         result = read_key()
-        # Our _map_readchar_key should parse this correctly
+        # Modified arrow key sequences should be parsed correctly
         self.assertEqual(result, "arrow_up")
 
     @patch("paraping.input_keys.readchar.readkey")
