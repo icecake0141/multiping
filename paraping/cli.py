@@ -297,7 +297,7 @@ def run(args):
     modes = ["ip", "rdns", "alias"]
     mode_index = 0
     show_help = False
-    display_modes = ["timeline", "sparkline"]
+    display_modes = ["timeline", "sparkline", "square"]
     display_mode_index = 0
     summary_modes = ["rates", "rtt", "ttl", "streak"]
     summary_mode_index = 0

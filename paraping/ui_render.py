@@ -749,6 +749,74 @@ def render_sparkline_view(
     return pad_lines(lines, width, height)
 
 
+def render_square_view(
+    display_entries,
+    buffers,
+    symbols,
+    width,
+    height,
+    header,
+    use_color=False,
+    scroll_offset=0,
+    header_lines=2,
+    boxed=False,
+):
+    """Render the square view (green/red square for OK/NG status)."""
+    if width <= 0 or height <= 0:
+        return []
+
+    render_width, render_height, can_box = resolve_boxed_dimensions(width, height, boxed)
+    host_labels = [entry[1] for entry in display_entries]
+    render_width, label_width, square_width, visible_hosts = compute_main_layout(
+        host_labels, render_width, render_height, header_lines
+    )
+    max_offset = max(0, len(display_entries) - visible_hosts)
+    scroll_offset = min(max(scroll_offset, 0), max_offset)
+    truncated_entries = display_entries[scroll_offset : scroll_offset + visible_hosts]
+
+    lines = []
+    lines.append(header)
+    lines.append("".join("-" for _ in range(render_width)))
+    
+    # ANSI color codes for green and red
+    green_color = "\x1b[32m"  # Green
+    red_color = "\x1b[31m"  # Red
+    
+    for host, label in truncated_entries:
+        timeline_symbols = list(buffers[host]["timeline"])
+        # Get the latest status
+        status = latest_status_from_timeline(timeline_symbols, symbols)
+        
+        # Determine square symbol and color
+        # OK = success or slow (green), NG = fail (red)
+        if status == "fail":
+            square = "■"  # Red square for fail
+            if use_color:
+                colored_square = f"{red_color}{square}{ANSI_RESET}"
+            else:
+                colored_square = square
+            colored_label = colorize_text(label, status, use_color)
+        else:
+            # success, slow, or pending - show green square
+            square = "■"  # Green square for OK
+            if use_color:
+                colored_square = f"{green_color}{square}{ANSI_RESET}"
+            else:
+                colored_square = square
+            colored_label = colorize_text(label, status, use_color)
+        
+        # Format the line with the label and square
+        lines.append(format_status_line(colored_label, colored_square, label_width))
+
+    if len(display_entries) > len(truncated_entries) and len(lines) < height:
+        remaining = len(display_entries) - len(truncated_entries)
+        lines.append(f"... ({remaining} host(s) not shown)")
+
+    if can_box:
+        return box_lines(lines, width, height)
+    return pad_lines(lines, width, height)
+
+
 def render_main_view(
     display_entries,
     buffers,
@@ -765,7 +833,7 @@ def render_main_view(
     header_lines=2,
     boxed=False,
 ):
-    """Render the main view (timeline or sparkline)."""
+    """Render the main view (timeline, sparkline, or square)."""
     pause_label = "PAUSED" if paused else "LIVE"
     header_base = f"ParaPing - {pause_label} results [{mode_label} | {display_mode}] {timestamp}"
     activity_indicator = ""
@@ -779,6 +847,19 @@ def render_main_view(
         header = header_base
     if display_mode == "sparkline":
         return render_sparkline_view(
+            display_entries,
+            buffers,
+            symbols,
+            width,
+            height,
+            header,
+            use_color,
+            scroll_offset,
+            header_lines,
+            boxed,
+        )
+    if display_mode == "square":
+        return render_square_view(
             display_entries,
             buffers,
             symbols,
@@ -850,7 +931,7 @@ def render_help_view(width, height, boxed=False):
         "ParaPing - Help",
         "-" * width,
         "  n: cycle display mode (ip/rdns/alias)",
-        "  v: toggle view (timeline/sparkline)",
+        "  v: toggle view (timeline/sparkline/square)",
         "  g: select host for fullscreen RTT graph",
         "  o: cycle sort (failures/streak/latency/host)",
         "  f: cycle filter (failures/latency/all)",
