@@ -21,7 +21,14 @@ import unittest
 # Add parent directory to path to import main
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-from main import box_lines, build_ascii_graph, render_help_view, render_host_selection_view, render_status_box, render_square_view  # noqa: E402
+from main import (  # noqa: E402
+    box_lines,
+    build_ascii_graph,
+    render_help_view,
+    render_host_selection_view,
+    render_square_view,
+    render_status_box,
+)
 
 
 class TestHelpView(unittest.TestCase):
@@ -87,14 +94,14 @@ class TestSquareView(unittest.TestCase):
     def test_render_square_view_basic(self):
         """Square view should render with squares for each host."""
         from collections import deque
-        
+
         display_entries = [(0, "host1"), (1, "host2")]
         buffers = {
             0: {"timeline": deque(["."], maxlen=5)},
             1: {"timeline": deque(["x"], maxlen=5)},
         }
         symbols = {"success": ".", "fail": "x", "slow": "!", "pending": "-"}
-        
+
         lines = render_square_view(
             display_entries,
             buffers,
@@ -107,7 +114,7 @@ class TestSquareView(unittest.TestCase):
             header_lines=2,
             boxed=False,
         )
-        
+
         # Should have header, separator, and entries
         self.assertGreaterEqual(len(lines), 4)
         self.assertIn("Test Header", lines[0])
@@ -118,13 +125,13 @@ class TestSquareView(unittest.TestCase):
     def test_render_square_view_with_success(self):
         """Square view should show square for success status."""
         from collections import deque
-        
+
         display_entries = [(0, "host1")]
         buffers = {
             0: {"timeline": deque([".", ".", "."], maxlen=5)},
         }
         symbols = {"success": ".", "fail": "x", "slow": "!", "pending": "-"}
-        
+
         lines = render_square_view(
             display_entries,
             buffers,
@@ -134,7 +141,7 @@ class TestSquareView(unittest.TestCase):
             header="Test",
             use_color=False,
         )
-        
+
         # Should render without error
         self.assertGreater(len(lines), 0)
         combined = "\n".join(lines)
@@ -143,13 +150,13 @@ class TestSquareView(unittest.TestCase):
     def test_render_square_view_with_fail(self):
         """Square view should show square for fail status."""
         from collections import deque
-        
+
         display_entries = [(0, "host1")]
         buffers = {
             0: {"timeline": deque(["x", "x", "x"], maxlen=5)},
         }
         symbols = {"success": ".", "fail": "x", "slow": "!", "pending": "-"}
-        
+
         lines = render_square_view(
             display_entries,
             buffers,
@@ -159,7 +166,7 @@ class TestSquareView(unittest.TestCase):
             header="Test",
             use_color=False,
         )
-        
+
         # Should render without error
         self.assertGreater(len(lines), 0)
         combined = "\n".join(lines)
@@ -168,4 +175,3 @@ class TestSquareView(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

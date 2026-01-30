@@ -767,7 +767,7 @@ def render_square_view(
 
     render_width, render_height, can_box = resolve_boxed_dimensions(width, height, boxed)
     host_labels = [entry[1] for entry in display_entries]
-    render_width, label_width, square_width, visible_hosts = compute_main_layout(
+    render_width, label_width, _, visible_hosts = compute_main_layout(
         host_labels, render_width, render_height, header_lines
     )
     max_offset = max(0, len(display_entries) - visible_hosts)
@@ -777,16 +777,16 @@ def render_square_view(
     lines = []
     lines.append(header)
     lines.append("".join("-" for _ in range(render_width)))
-    
+
     # ANSI color codes for green and red
     green_color = "\x1b[32m"  # Green
     red_color = "\x1b[31m"  # Red
-    
+
     for host, label in truncated_entries:
         timeline_symbols = list(buffers[host]["timeline"])
         # Get the latest status
         status = latest_status_from_timeline(timeline_symbols, symbols)
-        
+
         # Determine square symbol and color
         # OK = success or slow (green), NG = fail (red)
         if status == "fail":
@@ -804,7 +804,7 @@ def render_square_view(
             else:
                 colored_square = square
             colored_label = colorize_text(label, status, use_color)
-        
+
         # Format the line with the label and square
         lines.append(format_status_line(colored_label, colored_square, label_width))
 
