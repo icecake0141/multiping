@@ -767,9 +767,7 @@ def render_square_view(
 
     render_width, render_height, can_box = resolve_boxed_dimensions(width, height, boxed)
     host_labels = [entry[1] for entry in display_entries]
-    render_width, label_width, _, visible_hosts = compute_main_layout(
-        host_labels, render_width, render_height, header_lines
-    )
+    render_width, label_width, _, visible_hosts = compute_main_layout(host_labels, render_width, render_height, header_lines)
     max_offset = max(0, len(display_entries) - visible_hosts)
     scroll_offset = min(max(scroll_offset, 0), max_offset)
     truncated_entries = display_entries[scroll_offset : scroll_offset + visible_hosts]
@@ -778,9 +776,8 @@ def render_square_view(
     lines.append(header)
     lines.append("".join("-" for _ in range(render_width)))
 
-    # ANSI color codes for green and red
-    green_color = "\x1b[32m"  # Green
-    red_color = "\x1b[31m"  # Red
+    # ANSI color codes for green (not in STATUS_COLORS as success is white there)
+    green_color = "\x1b[32m"  # Green for OK status
 
     for host, label in truncated_entries:
         timeline_symbols = list(buffers[host]["timeline"])
@@ -788,19 +785,27 @@ def render_square_view(
         status = latest_status_from_timeline(timeline_symbols, symbols)
 
         # Determine square symbol and color
-        # OK = success or slow (green), NG = fail (red)
+        # OK = success or slow (green), NG = fail (red), pending = pending (gray)
         if status == "fail":
             square = "■"  # Red square for fail
             if use_color:
-                colored_square = f"{red_color}{square}{ANSI_RESET}"
+                colored_square = f"{STATUS_COLORS['fail']}{square}{ANSI_RESET}"
+            else:
+                colored_square = square
+            colored_label = colorize_text(label, status, use_color)
+        elif status in ("success", "slow"):
+            # success and slow both show green square (OK status)
+            square = "■"  # Green square for OK
+            if use_color:
+                colored_square = f"{green_color}{square}{ANSI_RESET}"
             else:
                 colored_square = square
             colored_label = colorize_text(label, status, use_color)
         else:
-            # success, slow, or pending - show green square
-            square = "■"  # Green square for OK
+            # pending or None status - show pending square
+            square = "■"  # Gray square for pending/unknown
             if use_color:
-                colored_square = f"{green_color}{square}{ANSI_RESET}"
+                colored_square = f"\x1b[37m{square}{ANSI_RESET}"  # Gray
             else:
                 colored_square = square
             colored_label = colorize_text(label, status, use_color)
