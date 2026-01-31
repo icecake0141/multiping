@@ -273,6 +273,8 @@ def scheduler_driven_ping_host(
             break
 
         # Convert to monotonic time for accurate sleep
+        # Note: This conversion assumes system clock doesn't change significantly during execution.
+        # If system time adjustments occur, scheduling accuracy may be affected.
         current_monotonic = time.monotonic()
         current_realtime = time.time()
         time_until_ping = next_ping_time - current_realtime
@@ -321,7 +323,7 @@ def scheduler_driven_ping_host(
             scheduler.mark_ping_sent(host, sent_time)
 
         # Perform the actual ping in a background thread to not block scheduling
-        def do_ping():
+        def execute_ping_async():
             try:
                 rtt_ms, ttl = ping_with_helper(host, timeout_ms=int(timeout * 1000), helper_path=helper_path)
                 if rtt_ms is not None:
@@ -355,7 +357,7 @@ def scheduler_driven_ping_host(
                 })
 
         # Launch ping in background thread
-        ping_thread = threading.Thread(target=do_ping, daemon=True)
+        ping_thread = threading.Thread(target=execute_ping_async, daemon=True)
         ping_thread.start()
 
     result_queue.put({"host_id": host_id, "status": "done"})

@@ -87,9 +87,9 @@ class TestSchedulerIntegration(unittest.TestCase):
         # Collect sent events with timestamps
         sent_events = []
         base_time = None
-        timeout = time.time() + 5.0  # 5 second timeout
+        collection_deadline = time.time() + 5.0  # 5 second deadline
 
-        while len(sent_events) < num_hosts and time.time() < timeout:
+        while len(sent_events) < num_hosts and time.time() < collection_deadline:
             try:
                 result = result_queue.get(timeout=0.5)
                 if result.get("status") == "sent":
@@ -242,10 +242,10 @@ class TestSchedulerIntegration(unittest.TestCase):
 
         # Collect sent events
         sent_times_monotonic = []
-        timeout = time.time() + 5.0
+        collection_deadline = time.time() + 5.0
 
         sent_count = 0
-        while sent_count < 3 and time.time() < timeout:
+        while sent_count < 3 and time.time() < collection_deadline:
             try:
                 result = result_queue.get(timeout=1.0)
                 if result.get("status") == "sent":
