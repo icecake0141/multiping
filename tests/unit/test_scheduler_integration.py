@@ -50,8 +50,8 @@ class TestSchedulerIntegration(unittest.TestCase):
             {"host": "192.0.2.2", "id": 1},
             {"host": "192.0.2.3", "id": 2},
         ]
-        N = len(hosts)
-        stagger = interval / N
+        num_hosts = len(hosts)
+        stagger = interval / num_hosts
 
         scheduler = Scheduler(interval=interval, stagger=stagger)
         ping_lock = threading.Lock()
@@ -89,7 +89,7 @@ class TestSchedulerIntegration(unittest.TestCase):
         base_time = None
         timeout = time.time() + 5.0  # 5 second timeout
 
-        while len(sent_events) < N and time.time() < timeout:
+        while len(sent_events) < num_hosts and time.time() < timeout:
             try:
                 result = result_queue.get(timeout=0.5)
                 if result.get("status") == "sent":
@@ -112,7 +112,7 @@ class TestSchedulerIntegration(unittest.TestCase):
         stop_event.set()
 
         # Verify we got all sent events
-        self.assertEqual(len(sent_events), N, "Should receive sent event from all hosts")
+        self.assertEqual(len(sent_events), num_hosts, "Should receive sent event from all hosts")
 
         # Sort by host_id to verify staggering
         sent_events.sort(key=lambda x: x["host_id"])
