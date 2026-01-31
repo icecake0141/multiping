@@ -41,6 +41,7 @@ STATUS_COLORS = {
     "success": "\x1b[37m",  # White
     "slow": "\x1b[33m",  # Yellow
     "fail": "\x1b[31m",  # Red
+    "pending": "\x1b[90m",  # Dark gray (bright black)
 }
 ACTIVITY_INDICATOR_WIDTH = 10
 ACTIVITY_INDICATOR_EXPANDED_WIDTH = 20

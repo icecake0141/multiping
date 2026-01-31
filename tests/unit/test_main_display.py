@@ -627,6 +627,18 @@ class TestColorOutput(unittest.TestCase):
         self.assertIn("\x1b[31m", colored)
         self.assertIn("\x1b[0m", colored)
 
+    def test_build_colored_timeline_includes_pending(self):
+        """Colored timeline should include pending status with dark gray color"""
+        symbols = {"success": ".", "fail": "x", "slow": "!", "pending": "-"}
+        timeline = ["-", ".", "-"]
+        colored = build_colored_timeline(timeline, symbols, use_color=True)
+        # Dark gray (bright black) color code
+        self.assertIn("\x1b[90m", colored)
+        # White for success
+        self.assertIn("\x1b[37m", colored)
+        # Reset code
+        self.assertIn("\x1b[0m", colored)
+
     def test_build_colored_sparkline_respects_status_symbols(self):
         """Colored sparkline should map statuses to colors"""
         symbols = {"success": ".", "fail": "x", "slow": "!"}
