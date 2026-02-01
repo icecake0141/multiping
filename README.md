@@ -725,6 +725,14 @@ Before opening a pull request, ensure you:
 
 For complete contribution guidelines, see [CONTRIBUTING.md](docs/CONTRIBUTING.md).
 
+## Supplement: ASN Lookup Mechanisms
+
+ASN lookups via Team Cymru whois service use the following mechanisms to ensure efficiency and responsible resource usage:
+
+- **Caching**: Successful lookups are cached for the program session, eliminating redundant queries for the same IP
+- **Retry with TTL**: Failed lookups are retried after a 5-minute delay, preventing excessive requests
+- **Thread Management**: A single worker thread processes requests sequentially, avoiding service overload
+
 ## License
 Apache License 2.0. See [LICENSE](LICENSE).
 
@@ -1231,6 +1239,14 @@ pytest tests/ --cov=. --cov-report=term --cov-fail-under=80
 5. ✅ AI 支援を使用する場合は [LLM PR ポリシー](.github/workflows/copilot-instructions.md) に従ってください（ライセンスヘッダー、LLM 帰属、および PR 説明に検証コマンドを含める）
 
 完全なコントリビューションガイドラインについては、[CONTRIBUTING.md](docs/CONTRIBUTING.md) を参照してください。
+
+## 補足: ASN ルックアップメカニズム
+
+Team Cymru の whois サービスを介した ASN ルックアップは、効率性と責任あるリソース使用を保証するために以下のメカニズムを使用します：
+
+- **キャッシング**: 成功したルックアップはプログラムセッション中キャッシュされ、同一 IP への冗長なクエリを排除します
+- **TTL によるリトライ**: 失敗したルックアップは 5 分後に再試行され、過剰なリクエストを防ぎます
+- **スレッド管理**: 単一のワーカースレッドがリクエストを順次処理し、サービスの過負荷を回避します
 
 ### ライセンス
 Apache License 2.0 — 詳細は [LICENSE](LICENSE) を参照してください。
